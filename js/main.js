@@ -113,10 +113,6 @@ function animate(now) {
   const delta = now - lastTime;
   lastTime = now;
 
-  // Actualizar FPS en HUD
-  const fps = Math.round(1000 / Math.max(delta, 1));
-  document.getElementById('status-fps').textContent = `FPS: ${fps}`;
-
   // Actualizar escena 3D
   if (sceneManager) sceneManager.update(delta);
 
