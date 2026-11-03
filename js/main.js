@@ -67,6 +67,40 @@ function setupGestureBindings() {
   document.getElementById('close-annotation').addEventListener('click', () => {
     annotationManager.hidePanel();
   });
+
+  // Conectar gestos de MediaPipe con acciones 3D
+  gestureTracker.onGesture = (gesture) => {
+    if (!sceneManager) return;
+
+    // Rotar con pinza o puño (arrastrar)
+    if (gesture.isPinching || gesture.isFist) {
+      // Usamos la punta del índice como referencia de movimiento
+      // (dx, dy) se calculan en el bucle principal comparando frames
+      sceneManager.isDragging = true;
+      sceneManager.lastDragPos = gesture.indexTip;
+    } else {
+      sceneManager.isDragging = false;
+      sceneManager.lastDragPos = null;
+    }
+
+    // Zoom con distancia entre dos manos
+    if (gesture.twoHandsDistance !== null) {
+      sceneManager.zoomModel(gesture.twoHandsDistance);
+    }
+
+    // Corte transversal controlado por posición Y de la mano (si está activo)
+    if (crossSection.enabled && gesture.indexTip) {
+      const normalizedY = gesture.indexTip.normalized.y;
+      crossSection.setHandPosition(normalizedY);
+    }
+
+    // Snapshot por gesto de captura (pinza sostenida - se detecta en el bucle)
+    if (gesture.isPinching && !snapshotMgr.isCapturing) {
+      snapshotMgr.startCaptureGesture();
+    } else if (!gesture.isPinching && snapshotMgr.isCapturing) {
+      snapshotMgr.endCaptureGesture();
+    }
+  };
 }
 
 function animate(now) {
@@ -85,8 +119,28 @@ function animate(now) {
   // Actualizar tracking de manos
   if (gestureTracker) gestureTracker.update(delta);
 
+  // --- ROTACIÓN POR ARRASTRE (pinza / puño) ---
+  if (sceneManager && sceneManager.isDragging && sceneManager.lastDragPos && gestureTracker && gestureTracker.indexTip) {
+    const current = gestureTracker.indexTip;
+    const prev = sceneManager.lastDragPos;
+    const dx = current.x - prev.x;
+    const dy = current.y - prev.y;
+    sceneManager.rotateModel(dx, dy);
+    sceneManager.lastDragPos = current;
+  }
+
+  // --- SMART ANNOTATIONS (raycasting con el índice) ---
+  if (annotationManager && annotationManager.enabled && gestureTracker && gestureTracker.indexTip && sceneManager) {
+    annotationManager.update(gestureTracker.indexTip, sceneManager);
+  }
+
   // Actualizar corte transversal si está activo
   if (crossSection && crossSection.enabled) crossSection.update();
+
+  // --- SNAPSHOT POR GESTO (pinza sostenida) ---
+  if (snapshotMgr && gestureTracker) {
+    snapshotMgr.updateCaptureGesture(gestureTracker.isPinching);
+  }
 
   // Actualizar posición del puntero visual (estela de partículas)
   if (gestureTracker && gestureTracker.indexTip) {

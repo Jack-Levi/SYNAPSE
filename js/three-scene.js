@@ -11,15 +11,13 @@ class SceneManager {
     this.clippingPlane = null;
     this.enabled = true;
 
-    // Entornos disponibles
+    // Entornos disponibles (solo celula por ahora)
     this.environments = {
-      motor: 'assets/models/motor.glb',
-      celula: 'assets/models/celula.glb',
-      planeta: 'assets/models/planeta.glb'
+      celula: 'assets/models/sel.glb'
     };
 
-    // Placeholders: si no hay modelo, se crea una geometría de prueba
-    this.useFallback = true;
+    // Cargar modelos reales, no placeholders
+    this.useFallback = false;
   }
 
   async init() {
@@ -67,8 +65,8 @@ class SceneManager {
     // Manejo de resize
     window.addEventListener('resize', () => this.onResize());
 
-    // Cargar entorno por defecto
-    await this.loadEnvironment('motor');
+    // Cargar entorno por defecto (celula)
+    await this.loadEnvironment('celula');
   }
 
   async loadEnvironment(envKey) {
@@ -89,7 +87,7 @@ class SceneManager {
     try {
       const gltf = await loader.loadAsync(url);
       this.currentModel = gltf.scene;
-      this.currentModel.scale.setScalar(1.5);
+      this.currentModel.scale.setScalar(2.0);
       this.currentModel.position.set(0, 0, 0);
       this.scene.add(this.currentModel);
 

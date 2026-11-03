@@ -65,7 +65,7 @@ class AnnotationManager {
       }
     };
 
-    this.currentEnv = 'motor';
+    this.currentEnv = 'celula';
     this.hoverTimer = null;
     this.hoverThreshold = 600; // ms manteniendo el dedo quieto para activar selección
     this.lastPartId = null;

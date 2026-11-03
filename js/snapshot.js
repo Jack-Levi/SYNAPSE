@@ -8,6 +8,9 @@ class SnapshotManager {
     this.list = document.getElementById('snapshot-list');
     this.maxSnapshots = 5;
     this.snapshots = [];
+    this.isCapturing = false;
+    this.captureGestureStartTime = null;
+    this.CAPTURE_HOLD_TIME = 1000; // ms que debe mantenerse la pinza para capturar
   }
 
   capture() {
@@ -27,6 +30,31 @@ class SnapshotManager {
 
     const dataUrl = tempCanvas.toDataURL('image/png');
     this.addSnapshot(dataUrl);
+  }
+
+  startCaptureGesture() {
+    this.isCapturing = true;
+    this.captureGestureStartTime = Date.now();
+  }
+
+  endCaptureGesture() {
+    this.isCapturing = false;
+    this.captureGestureStartTime = null;
+  }
+
+  updateCaptureGesture(isPinching) {
+    if (!this.isCapturing) return;
+
+    if (isPinching) {
+      const elapsed = Date.now() - this.captureGestureStartTime;
+      if (elapsed >= this.CAPTURE_HOLD_TIME) {
+        this.capture();
+        this.endCaptureGesture();
+      }
+    } else {
+      // Se soltó la pinza antes de tiempo, cancelar
+      this.endCaptureGesture();
+    }
   }
 
   addSnapshot(dataUrl) {
