@@ -28,12 +28,8 @@ async function init() {
 
     // 7. Bucle principal
     requestAnimationFrame(animate);
-
-    document.getElementById('status-camera').textContent = 'Cámara: Activa';
-    document.getElementById('status-gesture').textContent = 'Gesto: Listo';
   } catch (err) {
     console.error('Error inicializando SYNAPSE:', err);
-    document.getElementById('status-camera').textContent = 'Cámara: Error';
   }
 }
 
@@ -72,10 +68,15 @@ function setupGestureBindings() {
   gestureTracker.onGesture = (gesture) => {
     if (!sceneManager) return;
 
-    // Rotar con pinza o puño (arrastrar)
-    if (gesture.isPinching || gesture.isFist) {
-      // Usamos la punta del índice como referencia de movimiento
-      // (dx, dy) se calculan en el bucle principal comparando frames
+    // === GESTO 1: Captura (snapshot) ===
+    // Se detecta con pinza sostenida 1 segundo en el bucle animate()
+
+    // === GESTO 2: Mover libremente (como mouse) ===
+    // Cuando está activa palma abierta, el puntero visual sigue la mano
+    // (se maneja en el bucle animate)
+
+    // === GESTO 3: Puño → rotar ===
+    if (gesture.isFist) {
       sceneManager.isDragging = true;
       sceneManager.lastDragPos = gesture.indexTip;
     } else {
@@ -83,22 +84,27 @@ function setupGestureBindings() {
       sceneManager.lastDragPos = null;
     }
 
-    // Zoom con distancia entre dos manos
-    if (gesture.twoHandsDistance !== null) {
+    // === GESTO 4: Pinza → zoom (acercar/alejar) ===
+    if (gesture.isPinching) {
+      // Usamos la posición Y del índice para zoom vertical
+      // Arriba = acercar, Abajo = alejar
+      const normalizedY = gesture.indexTip.normalized.y;
+      const zoomFactor = THREE.MathUtils.lerp(0.5, 2.0, 1 - normalizedY);
+      sceneManager.zoomModel(zoomFactor);
+    } else if (gesture.twoHandsDistance !== null) {
+      // Zoom alternativo con dos manos
       sceneManager.zoomModel(gesture.twoHandsDistance);
+    }
+
+    // === GESTO 5: Gesto "L" → alejar ===
+    if (gesture.isGestureL) {
+      sceneManager.zoomOut();
     }
 
     // Corte transversal controlado por posición Y de la mano (si está activo)
     if (crossSection.enabled && gesture.indexTip) {
       const normalizedY = gesture.indexTip.normalized.y;
       crossSection.setHandPosition(normalizedY);
-    }
-
-    // Snapshot por gesto de captura (pinza sostenida - se detecta en el bucle)
-    if (gesture.isPinching && !snapshotMgr.isCapturing) {
-      snapshotMgr.startCaptureGesture();
-    } else if (!gesture.isPinching && snapshotMgr.isCapturing) {
-      snapshotMgr.endCaptureGesture();
     }
   };
 }
@@ -115,7 +121,7 @@ function animate(now) {
   // Actualizar tracking de manos
   if (gestureTracker) gestureTracker.update(delta);
 
-  // --- ROTACIÓN POR ARRASTRE (pinza / puño) ---
+  // --- ROTACIÓN POR ARRASTRE (puño) ---
   if (sceneManager && sceneManager.isDragging && sceneManager.lastDragPos && gestureTracker && gestureTracker.indexTip) {
     const current = gestureTracker.indexTip;
     const prev = sceneManager.lastDragPos;
@@ -133,9 +139,17 @@ function animate(now) {
   // Actualizar corte transversal si está activo
   if (crossSection && crossSection.enabled) crossSection.update();
 
-  // --- SNAPSHOT POR GESTO (pinza sostenida) ---
+  // --- SNAPSHOT POR GESTO (pinza sostenida 1 segundo) ---
   if (snapshotMgr && gestureTracker) {
-    snapshotMgr.updateCaptureGesture(gestureTracker.isPinching);
+    if (gesture.isPinching && !gestureTracker.isCaptureGestureActive()) {
+      gestureTracker.startCaptureGesture();
+    } else if (!gesture.isPinching && gestureTracker.isCaptureGestureActive()) {
+      // Se soltó antes de tiempo, cancelar
+      gestureTracker.endCaptureGesture();
+    } else if (gesture.isPinching && gestureTracker.getCaptureElapsedTime() >= gestureTracker.CAPTURE_HOLD_TIME) {
+      snapshotMgr.capture();
+      gestureTracker.endCaptureGesture();
+    }
   }
 
   // Actualizar posición del puntero visual (estela de partículas)

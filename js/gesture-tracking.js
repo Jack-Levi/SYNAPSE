@@ -1,6 +1,10 @@
 // SYNAPSE — GestureTracker (MediaPipe Hands)
-// Detecta coordenadas de la mano, gestos (pinza, puño, dos manos, palma abierta)
-// y expone la punta del índice para el puntero de partículas.
+// Detecta 5 gestos específicos para el proyecto:
+// 1. Captura (snapshot)
+// 2. Mover libremente (puntero sigue la mano)
+// 3. Puño → rotar
+// 4. Pinza → zoom (acercar/alejar)
+// 5. Gesto "L" → alejar
 
 class GestureTracker {
   constructor() {
@@ -12,22 +16,26 @@ class GestureTracker {
 
     // Estado de gestos
     this.indexTip = null;        // {x, y} en pantalla del dedo índice
-    this.isPinching = false;     // pulgar + índice cerca
-    this.isFist = false;         // puño cerrado
-    this.isOpenPalm = false;     // palma abierta
-    this.twoHandsDistance = null;// distancia entre manos (para zoom)
-    this.currentGesture = 'Ninguno'; // string descriptivo del gesto activo
+    this.isPinching = false;     // pulgar + índice cerca (zoom)
+    this.isFist = false;         // puño cerrado (rotar)
+    this.isOpenPalm = false;     // palma abierta (mover libremente)
+    this.isGestureL = false;     // gesto "L" (alejar)
+    this.twoHandsDistance = null;// distancia entre manos (zoom alternativo)
+    this.currentGesture = 'Ninguno'; // string descriptivo
 
     // Suavizado (Exponential Smoothing)
     this.smoothFactor = 0.2;
     this.prevIndex = { x: 0, y: 0 };
+
+    // Timers para gestos sostenidos
+    this.captureGestureStartTime = null;
+    this.CAPTURE_HOLD_TIME = 1000; // ms para snapshot
 
     // Callbacks externos
     this.onGesture = null;
   }
 
   async init() {
-    // Configurar MediaPipe Hands
     this.hands = new Hands({
       locateFile: (file) => {
         return `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`;
@@ -43,7 +51,6 @@ class GestureTracker {
 
     this.hands.onResults((results) => this.onResults(results));
 
-    // Iniciar cámara
     this.camera = new Camera(this.video, {
       onFrame: async () => {
         await this.hands.send({ image: this.video });
@@ -54,13 +61,11 @@ class GestureTracker {
 
     this.camera.start();
 
-    // Ajustar canvas al video
     this.canvas.width = 640;
     this.canvas.height = 480;
   }
 
   onResults(results) {
-    // Dibujar landmarks en canvas oculto (opcional, para depuración)
     this.ctx.save();
     this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
     this.ctx.drawImage(results.image, 0, 0, this.canvas.width, this.canvas.height);
@@ -88,30 +93,34 @@ class GestureTracker {
     this.isPinching = false;
     this.isFist = false;
     this.isOpenPalm = false;
+    this.isGestureL = false;
     this.twoHandsDistance = null;
 
-    if (handsLandmarks.length === 0) return;
+    if (handsLandmarks.length === 0) {
+      this.currentGesture = 'Ninguno';
+      this.notify();
+      return;
+    }
 
-    // Si hay dos manos, calcular distancia entre ellas (zoom)
+    // Si hay dos manos, calcular distancia (zoom alternativo con pinza en cada mano)
     if (handsLandmarks.length === 2) {
       const h1 = handsLandmarks[0];
       const h2 = handsLandmarks[1];
-      const p1 = h1[9]; // medio de la mano 1
-      const p2 = h2[9]; // medio de la mano 2
+      const p1 = h1[9];
+      const p2 = h2[9];
       this.twoHandsDistance = Math.hypot(p1.x - p2.x, p1.y - p2.y);
+      this.currentGesture = 'Dos manos (zoom)';
+      this.notify();
+      return;
     }
 
-    // Procesar primera mano para gestos principales
+    // Procesar primera mano
     const hand = handsLandmarks[0];
 
-    // Índice: punta (8), base (5)
     const indexTip = hand[8];
     const indexMCP = hand[5];
-
-    // Pulgar: punta (4)
     const thumbTip = hand[4];
-
-    // Otros dedos para detectar puño / palma abierta
+    const thumbMCP = hand[2];
     const middleTip = hand[12];
     const ringTip = hand[16];
     const pinkyTip = hand[20];
@@ -126,55 +135,90 @@ class GestureTracker {
     this.indexTip = {
       x: this.prevIndex.x,
       y: this.prevIndex.y,
-      normalized: indexTip // {x, y, z} en [0,1]
+      normalized: indexTip
     };
 
-    // Detectar pinza: distancia entre pulgar e índice pequeña
+    // --- DETECCIÓN DE GESTOS ---
+
+    // 1. Pinza: pulgar e índice cerca (zoom)
     const pinchDist = Math.hypot(thumbTip.x - indexTip.x, thumbTip.y - indexTip.y);
     this.isPinching = pinchDist < 0.05;
 
-    // Detectar puño: puntas de dedos cercanas a la base de la palma
+    // 2. Puño: dedos medio, anular, meñique cerca de la base de la palma (rotar)
     const fistDist =
       Math.hypot(middleTip.x - indexMCP.x, middleTip.y - indexMCP.y) +
       Math.hypot(ringTip.x - indexMCP.x, ringTip.y - indexMCP.y) +
       Math.hypot(pinkyTip.x - indexMCP.x, pinkyTip.y - indexMCP.y);
     this.isFist = fistDist < 0.25;
 
-    // Detectar palma abierta: dedos extendidos (y de índice mayor que de pulgar)
+    // 3. Palma abierta: todos los dedos extendidos (mover libremente como mouse)
     this.isOpenPalm =
       indexTip.y < indexMCP.y &&
       middleTip.y < hand[9].y &&
       ringTip.y < hand[9].y &&
-      pinkyTip.y < hand[9].y;
+      pinkyTip.y < hand[9].y &&
+      thumbTip.x < thumbMCP.x; // pulgar extendido hacia afuera
 
-    // Determinar gesto activo como string
-    if (handsLandmarks.length === 2) {
-      this.currentGesture = 'Dos manos (zoom)';
+    // 4. Gesto "L": pulgar extendido horizontalmente + índice extendido verticalmente
+    // El pulgar apunta a la derecha (o izquierda) y el índice hacia arriba
+    const thumbExtended = Math.abs(thumbTip.x - thumbMCP.x) > 0.08;
+    const indexExtendedUp = indexTip.y < indexMCP.y - 0.05;
+    const otherFingersClosed =
+      middleTip.y > indexMCP.y &&
+      ringTip.y > indexMCP.y &&
+      pinkyTip.y > indexMCP.y;
+    this.isGestureL = thumbExtended && indexExtendedUp && otherFingersClosed;
+
+    // --- DETERMINAR GESTO ACTIVO (prioridad) ---
+    if (this.isGestureL) {
+      this.currentGesture = 'L (alejar)';
     } else if (this.isPinching) {
-      this.currentGesture = 'Pinza (agarrar/rotar)';
+      this.currentGesture = 'Pinza (zoom)';
     } else if (this.isFist) {
       this.currentGesture = 'Puño (rotar)';
     } else if (this.isOpenPalm) {
-      this.currentGesture = 'Palma abierta (pausar)';
+      this.currentGesture = 'Mover libremente';
     } else {
       this.currentGesture = 'Ninguno';
     }
 
-    // Notificar callback si existe
+    this.notify();
+  }
+
+  notify() {
     if (this.onGesture) {
       this.onGesture({
         indexTip: this.indexTip,
         isPinching: this.isPinching,
         isFist: this.isFist,
         isOpenPalm: this.isOpenPalm,
+        isGestureL: this.isGestureL,
         twoHandsDistance: this.twoHandsDistance,
         currentGesture: this.currentGesture
       });
     }
   }
 
+  // Métodos para snapshot (pinza sostenida)
+  startCaptureGesture() {
+    this.captureGestureStartTime = Date.now();
+  }
+
+  endCaptureGesture() {
+    this.captureGestureStartTime = null;
+  }
+
+  isCaptureGestureActive() {
+    return this.captureGestureStartTime !== null;
+  }
+
+  getCaptureElapsedTime() {
+    if (!this.captureGestureStartTime) return 0;
+    return Date.now() - this.captureGestureStartTime;
+  }
+
   update(delta) {
-    // Aquí podría ir lógica adicional de filtrado temporal
+    // Lógica adicional si se necesita
   }
 
   stop() {

@@ -144,12 +144,25 @@ class SceneManager {
     this.currentModel.rotation.x += dy * 0.005;
   }
 
-  // Zoom por distancia entre dos manos
-  zoomModel(distance) {
+  // Zoom por factor (0.5 = cerca, 2.0 = lejos) o por distancia entre manos
+  zoomModel(factor) {
     if (!this.currentModel || !this.enabled) return;
-    // distance es un valor entre 0 y 1 aprox; mapeamos a zoom de cámara
-    const targetZoom = THREE.MathUtils.lerp(3, 10, distance);
+    // Si factor está entre 0 y 1, es distancia entre manos; si es > 1, es factor directo
+    let targetZoom;
+    if (factor <= 1) {
+      targetZoom = THREE.MathUtils.lerp(3, 10, factor);
+    } else {
+      targetZoom = THREE.MathUtils.lerp(3, 10, factor / 2);
+    }
     this.camera.position.z = THREE.MathUtils.lerp(this.camera.position.z, targetZoom, 0.1);
+    this.camera.lookAt(this.scene.position);
+    this.camera.updateProjectionMatrix();
+  }
+
+  // Alejar la cámara (zoom out rápido)
+  zoomOut() {
+    if (!this.currentModel || !this.enabled) return;
+    this.camera.position.z = THREE.MathUtils.lerp(this.camera.position.z, 12, 0.15);
     this.camera.lookAt(this.scene.position);
     this.camera.updateProjectionMatrix();
   }
