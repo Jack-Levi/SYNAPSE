@@ -1,10 +1,11 @@
 // SYNAPSE — GestureTracker (MediaPipe Hands)
-// Detecta 5 gestos específicos:
-// 1. Palma abierta → mover libremente (cursor)
-// 2. Puño cerrado → rotar
-// 3. Pinza → zoom
-// 4. Gesto "L" → alejar / reset zoom
-// 5. Pinza sostenida → snapshot
+// 6 Gestos específicos y aislados:
+// 1. Palma abierta       -> MODO: LIBRE (cursor, hover annotations, dwell click)
+// 2. Puño cerrado        -> MODO: ROTAR (arrastrar 3D)
+// 3. Pinza               -> MODO: ACERCAR / ZOOM IN (progresivo suave)
+// 4. Gesto "L" (1 mano)  -> MODO: ALEJAR / ZOOM OUT (progresivo suave)
+// 5. Dos dedos (paz)     -> MODO: CORTE RX (ajuste Y de corte)
+// 6. Gesto Foto          -> MODO: CAPTURA (2 manos con encuadre L / 1 mano sostenida)
 
 class GestureTracker {
   constructor() {
@@ -14,19 +15,18 @@ class GestureTracker {
     this.hands = null;
     this.camera = null;
 
-    this.indexTip = null;        // {x, y} pantalla, normalized {x,y,z}
+    this.indexTip = null;        // {x, y, normalized, rawNormalized}
     this.isPinching = false;
     this.isFist = false;
     this.isOpenPalm = false;
     this.isGestureL = false;
+    this.isTwoFingers = false;
+    this.isPhotoFrame = false;
     this.twoHandsDistance = null;
-    this.currentGesture = 'Ninguno';
+    this.currentGesture = 'MODO: LIBRE';
 
-    this.smoothFactor = 0.2;
-    this.prevIndex = { x: 0, y: 0 };
-
-    this.captureGestureStartTime = null;
-    this.CAPTURE_HOLD_TIME = 1000;
+    this.smoothFactor = 0.25;
+    this.prevIndex = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
 
     this.onGesture = null;
   }
@@ -63,10 +63,10 @@ class GestureTracker {
     this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
     this.ctx.drawImage(results.image, 0, 0, this.canvas.width, this.canvas.height);
 
-    if (results.multiHandLandmarks.length > 0) {
+    if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
       results.multiHandLandmarks.forEach((landmarks) => {
         drawConnectors(this.ctx, landmarks, HAND_CONNECTIONS, {
-          color: '#22d3ee',
+          color: '#38bdf8',
           lineWidth: 2
         });
         drawLandmarks(this.ctx, landmarks, {
@@ -80,37 +80,89 @@ class GestureTracker {
     this.processLandmarks(results.multiHandLandmarks);
   }
 
+  // Detecta si una mano individual forma una 'L' (pulgar + índice extendidos perpendicularmente, resto doblados)
+  checkHandL(hand) {
+    const thumbTip = hand[4];
+    const thumbMCP = hand[2];
+    const indexTip = hand[8];
+    const indexMCP = hand[5];
+    const middleTip = hand[12];
+    const middlePIP = hand[10];
+    const ringTip = hand[16];
+    const ringPIP = hand[14];
+    const pinkyTip = hand[20];
+    const pinkyPIP = hand[18];
+    const wrist = hand[0];
+
+    const thumbSpread = Math.hypot(thumbTip.x - thumbMCP.x, thumbTip.y - thumbMCP.y) > 0.11;
+    const indexExtended = (indexMCP.y - indexTip.y) > 0.07;
+    const middleClosed = middleTip.y > middlePIP.y || Math.hypot(middleTip.x - wrist.x, middleTip.y - wrist.y) < Math.hypot(indexMCP.x - wrist.x, indexMCP.y - wrist.y);
+    const ringClosed = ringTip.y > ringPIP.y;
+    const pinkyClosed = pinkyTip.y > pinkyPIP.y;
+    const pinchDist = Math.hypot(thumbTip.x - indexTip.x, thumbTip.y - indexTip.y);
+
+    return thumbSpread && indexExtended && middleClosed && ringClosed && pinkyClosed && pinchDist > 0.08;
+  }
+
   processLandmarks(handsLandmarks) {
     this.indexTip = null;
     this.isPinching = false;
     this.isFist = false;
     this.isOpenPalm = false;
     this.isGestureL = false;
+    this.isTwoFingers = false;
+    this.isPhotoFrame = false;
     this.twoHandsDistance = null;
 
     if (!handsLandmarks || handsLandmarks.length === 0) {
-      this.currentGesture = 'Ninguno';
+      this.currentGesture = 'Sin mano detectada';
       this.notify();
       return;
     }
 
-    if (handsLandmarks.length === 2) {
+    // Mano principal de puntero (usamos la primera)
+    const primaryHand = handsLandmarks[0];
+    const indexTip = primaryHand[8];
+    const rawX = (1 - indexTip.x) * window.innerWidth;
+    const rawY = indexTip.y * window.innerHeight;
+
+    // Suavizado exponencial (lerp)
+    this.prevIndex.x += (rawX - this.prevIndex.x) * this.smoothFactor;
+    this.prevIndex.y += (rawY - this.prevIndex.y) * this.smoothFactor;
+
+    this.indexTip = {
+      x: this.prevIndex.x,
+      y: this.prevIndex.y,
+      rawNormalized: indexTip,
+      normalized: {
+        x: (1 - indexTip.x),
+        y: indexTip.y
+      }
+    };
+
+    // --- REVISIÓN GESTO FOTO / ENCUADRE DE 2 MANOS ---
+    if (handsLandmarks.length >= 2) {
       const h1 = handsLandmarks[0];
       const h2 = handsLandmarks[1];
-      const p1 = h1[9];
-      const p2 = h2[9];
-      this.twoHandsDistance = Math.hypot(p1.x - p2.x, p1.y - p2.y);
-      this.currentGesture = 'Dos manos (zoom)';
-      this.notify();
-      return;
+      const h1IsL = this.checkHandL(h1);
+      const h2IsL = this.checkHandL(h2);
+
+      // Si ambas manos hacen L (formando el visor fotográfico rectangular)
+      if (h1IsL && h2IsL) {
+        this.isPhotoFrame = true;
+        this.currentGesture = 'MODO: CAPTURA';
+        this.notify();
+        return;
+      }
     }
 
-    const hand = handsLandmarks[0];
-    const indexTip = hand[8];
+    // Análisis de la mano principal
+    const hand = primaryHand;
+    const thumbTip = hand[4];
+    const thumbIP = hand[3];
+    const thumbMCP = hand[2];
     const indexPIP = hand[6];
     const indexMCP = hand[5];
-    const thumbTip = hand[4];
-    const thumbMCP = hand[2];
     const middleTip = hand[12];
     const middlePIP = hand[10];
     const middleMCP = hand[9];
@@ -122,64 +174,60 @@ class GestureTracker {
     const pinkyMCP = hand[17];
     const wrist = hand[0];
 
-    // Invertir eje X por efecto espejo de la cámara
-    const rawX = (1 - indexTip.x) * window.innerWidth;
-    const rawY = indexTip.y * window.innerHeight;
-
-    // Suavizado exponencial (lerp)
-    this.prevIndex.x += (rawX - this.prevIndex.x) * this.smoothFactor;
-    this.prevIndex.y += (rawY - this.prevIndex.y) * this.smoothFactor;
-
-    this.indexTip = {
-      x: this.prevIndex.x,
-      y: this.prevIndex.y,
-      rawNormalized: indexTip, // Landmark original de MediaPipe
-      normalized: {
-        x: (1 - indexTip.x),
-        y: indexTip.y
-      }
-    };
-
-    // 1. Distancia de pinza (pulgar e índice) en espacio normalizado 3D/2D
+    // 1. PINZA: Pulgar e índice juntos (< 0.05 en distancia normalizada)
     const pinchDist = Math.hypot(thumbTip.x - indexTip.x, thumbTip.y - indexTip.y, thumbTip.z - indexTip.z);
-    this.isPinching = pinchDist < 0.07;
+    const isPinchingCandidate = pinchDist < 0.055;
 
-    // 2. Puño cerrado: todos los dedos flexionados hacia la palma / muñeca
-    const fingersFolded =
+    // 2. DOS DEDOS (Tijera / Paz): Índice y medio extendidos juntos, anular y meñique doblados
+    const indexUp = indexTip.y < indexPIP.y && indexPIP.y < indexMCP.y;
+    const middleUp = middleTip.y < middlePIP.y && middlePIP.y < middleMCP.y;
+    const ringDown = ringTip.y > ringPIP.y;
+    const pinkyDown = pinkyTip.y > pinkyPIP.y;
+    const fingersNearEachOther = Math.hypot(indexTip.x - middleTip.x, indexTip.y - middleTip.y) < 0.09;
+    const isTwoFingersCandidate = indexUp && middleUp && ringDown && pinkyDown && fingersNearEachOther && pinchDist > 0.07;
+
+    // 3. GESTO "L": Pulgar extendido horizontalmente, índice vertical, otros 3 doblados
+    const isLCandidate = this.checkHandL(hand);
+
+    // 4. PUÑO CERRADO: Todos los dedos doblados hacia la palma
+    const allFolded =
+      indexTip.y > indexPIP.y &&
       middleTip.y > middlePIP.y &&
       ringTip.y > ringPIP.y &&
-      pinkyTip.y > pinkyPIP.y &&
-      indexTip.y > indexPIP.y;
-    const fistCompactness =
-      Math.hypot(middleTip.x - wrist.x, middleTip.y - wrist.y) <
-      Math.hypot(middleMCP.x - wrist.x, middleMCP.y - wrist.y) * 1.35;
-    this.isFist = fingersFolded || fistCompactness;
+      pinkyTip.y > pinkyPIP.y;
+    const fistProximity =
+      Math.hypot(indexTip.x - wrist.x, indexTip.y - wrist.y) < 0.28 &&
+      Math.hypot(middleTip.x - wrist.x, middleTip.y - wrist.y) < 0.28;
+    const isFistCandidate = allFolded || fistProximity;
 
-    // 3. Gesto "L": pulgar extendido lateralmente, índice extendido hacia arriba, y los otros 3 cerrados
-    const thumbExtended = Math.hypot(thumbTip.x - thumbMCP.x, thumbTip.y - thumbMCP.y) > 0.12;
-    const indexExtended = (indexMCP.y - indexTip.y) > 0.08;
-    const middleClosed = middleTip.y > middlePIP.y || Math.hypot(middleTip.x - wrist.x, middleTip.y - wrist.y) < Math.hypot(middleMCP.x - wrist.x, middleMCP.y - wrist.y);
-    const ringClosed = ringTip.y > ringPIP.y || Math.hypot(ringTip.x - wrist.x, ringTip.y - wrist.y) < Math.hypot(ringMCP.x - wrist.x, ringMCP.y - wrist.y);
-    const pinkyClosed = pinkyTip.y > pinkyPIP.y || Math.hypot(pinkyTip.x - wrist.x, pinkyTip.y - wrist.y) < Math.hypot(pinkyMCP.x - wrist.x, pinkyMCP.y - wrist.y);
-    this.isGestureL = thumbExtended && indexExtended && middleClosed && ringClosed && pinkyClosed && !this.isPinching;
+    // 5. PALMA ABIERTA: Todos los dedos extendidos y abiertos
+    const isOpenPalmCandidate =
+      indexTip.y < indexPIP.y &&
+      middleTip.y < middlePIP.y &&
+      ringTip.y < ringPIP.y &&
+      pinkyTip.y < pinkyPIP.y &&
+      pinchDist > 0.09;
 
-    // 4. Palma abierta: todos los dedos extendidos y separados
-    const indexOpen = indexTip.y < indexPIP.y;
-    const middleOpen = middleTip.y < middlePIP.y;
-    const ringOpen = ringTip.y < ringPIP.y;
-    const pinkyOpen = pinkyTip.y < pinkyPIP.y;
-    this.isOpenPalm = indexOpen && middleOpen && ringOpen && pinkyOpen && !this.isPinching;
-
-    if (this.isGestureL) {
-      this.currentGesture = 'Gesto L (reset zoom)';
-    } else if (this.isPinching) {
-      this.currentGesture = 'Pinza (zoom / snapshot)';
-    } else if (this.isFist) {
-      this.currentGesture = 'Puño (rotar)';
-    } else if (this.isOpenPalm) {
-      this.currentGesture = 'Palma abierta (mover)';
+    // Asignación estricta por prioridad
+    if (isPinchingCandidate) {
+      this.isPinching = true;
+      this.currentGesture = 'MODO: ACERCAR / ZOOM IN';
+    } else if (isTwoFingersCandidate) {
+      this.isTwoFingers = true;
+      this.currentGesture = 'MODO: CORTE RX';
+    } else if (isLCandidate) {
+      this.isGestureL = true;
+      this.currentGesture = 'MODO: ALEJAR / ZOOM OUT';
+    } else if (isFistCandidate) {
+      this.isFist = true;
+      this.currentGesture = 'MODO: ROTAR';
+    } else if (isOpenPalmCandidate) {
+      this.isOpenPalm = true;
+      this.currentGesture = 'MODO: LIBRE';
     } else {
-      this.currentGesture = 'Detectando...';
+      // Estado libre por defecto
+      this.isOpenPalm = true;
+      this.currentGesture = 'MODO: LIBRE';
     }
 
     this.notify();
@@ -193,16 +241,13 @@ class GestureTracker {
         isFist: this.isFist,
         isOpenPalm: this.isOpenPalm,
         isGestureL: this.isGestureL,
+        isTwoFingers: this.isTwoFingers,
+        isPhotoFrame: this.isPhotoFrame,
         twoHandsDistance: this.twoHandsDistance,
         currentGesture: this.currentGesture
       });
     }
   }
-
-  startCaptureGesture() { this.captureGestureStartTime = Date.now(); }
-  endCaptureGesture() { this.captureGestureStartTime = null; }
-  isCaptureGestureActive() { return this.captureGestureStartTime !== null; }
-  getCaptureElapsedTime() { return this.captureGestureStartTime ? Date.now() - this.captureGestureStartTime : 0; }
 
   update(delta) {}
   stop() { if (this.camera) this.camera.stop(); }

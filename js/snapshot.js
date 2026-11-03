@@ -1,20 +1,62 @@
 // SYNAPSE — Snapshot Manager
-// Captura la vista 3D actual y la guarda en una galería flotante.
+// Captura la vista 3D actual y la guarda en una galería flotante (máximo 4 elementos).
 
 class SnapshotManager {
   constructor(sceneManager) {
     this.sceneManager = sceneManager;
     this.gallery = document.getElementById('snapshot-gallery');
     this.list = document.getElementById('snapshot-list');
-    this.maxSnapshots = 5;
+    this.maxSnapshots = 4;
     this.snapshots = [];
-    this.isCapturing = false;
-    this.captureGestureStartTime = null;
-    this.CAPTURE_HOLD_TIME = 1000; // ms que debe mantenerse la pinza para capturar
+
+    this.cooldownUntil = 0;
+    this.COOLDOWN_MS = 5000; // 5 segundos de cooldown estricto
+
+    this.initGalleryUI();
+  }
+
+  initGalleryUI() {
+    if (!this.gallery) return;
+
+    // Asegurar botón para limpiar historial
+    let clearBtn = document.getElementById('clear-snapshots-btn');
+    if (!clearBtn) {
+      const header = this.gallery.querySelector('.gallery-header') || this.gallery.querySelector('h4');
+      if (header) {
+        clearBtn = document.createElement('button');
+        clearBtn.id = 'clear-snapshots-btn';
+        clearBtn.textContent = 'Limpiar';
+        clearBtn.style.cssText = `
+          background: rgba(255, 255, 255, 0.08);
+          border: 1px solid rgba(255, 255, 255, 0.15);
+          color: #94a3b8;
+          font-size: 0.72rem;
+          padding: 2px 8px;
+          border-radius: 4px;
+          cursor: pointer;
+          float: right;
+          margin-top: -2px;
+          transition: all 0.2s;
+        `;
+        clearBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          this.clearSnapshots();
+        });
+        header.appendChild(clearBtn);
+      }
+    }
+  }
+
+  canCapture() {
+    return Date.now() >= this.cooldownUntil;
   }
 
   capture() {
-    if (!this.sceneManager || !this.sceneManager.renderer) return;
+    if (!this.canCapture()) return false;
+    if (!this.sceneManager || !this.sceneManager.renderer) return false;
+
+    // Activar cooldown de 5 segundos
+    this.cooldownUntil = Date.now() + this.COOLDOWN_MS;
 
     // Renderizar frame actual
     const domElement = this.sceneManager.renderer.domElement;
@@ -26,14 +68,14 @@ class SnapshotManager {
     tempCanvas.height = height;
     const tempCtx = tempCanvas.getContext('2d');
 
-    // Copiar el frame del WebGL renderer
     tempCtx.drawImage(domElement, 0, 0);
 
     const dataUrl = tempCanvas.toDataURL('image/png');
     this.addSnapshot(dataUrl);
 
-    // Feedback visual en pantalla (flash)
+    // Feedback visual sutil (flash)
     this.triggerFlashFeedback();
+    return true;
   }
 
   triggerFlashFeedback() {
@@ -41,60 +83,42 @@ class SnapshotManager {
     flash.style.cssText = `
       position: fixed;
       inset: 0;
-      background: rgba(255, 255, 255, 0.4);
+      background: rgba(255, 255, 255, 0.45);
       z-index: 999999;
       pointer-events: none;
-      transition: opacity 0.4s ease-out;
+      transition: opacity 0.35s ease-out;
     `;
     document.body.appendChild(flash);
     requestAnimationFrame(() => {
       flash.style.opacity = '0';
-      setTimeout(() => flash.remove(), 400);
+      setTimeout(() => flash.remove(), 350);
     });
-  }
-
-  startCaptureGesture() {
-    this.isCapturing = true;
-    this.captureGestureStartTime = Date.now();
-  }
-
-  endCaptureGesture() {
-    this.isCapturing = false;
-    this.captureGestureStartTime = null;
-  }
-
-  updateCaptureGesture(isPinching) {
-    if (!this.isCapturing) return;
-
-    if (isPinching) {
-      const elapsed = Date.now() - this.captureGestureStartTime;
-      if (elapsed >= this.CAPTURE_HOLD_TIME) {
-        this.capture();
-        this.endCaptureGesture();
-      }
-    } else {
-      // Se soltó la pinza antes de tiempo, cancelar
-      this.endCaptureGesture();
-    }
   }
 
   addSnapshot(dataUrl) {
     const snapshot = {
       id: Date.now(),
       url: dataUrl,
-      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })
     };
 
     this.snapshots.unshift(snapshot);
     if (this.snapshots.length > this.maxSnapshots) {
-      this.snapshots.pop();
+      this.snapshots = this.snapshots.slice(0, this.maxSnapshots);
     }
 
     this.renderGallery();
-    this.gallery.classList.remove('hidden');
+    if (this.gallery) this.gallery.classList.remove('hidden');
+  }
+
+  clearSnapshots() {
+    this.snapshots = [];
+    if (this.list) this.list.innerHTML = '';
+    if (this.gallery) this.gallery.classList.add('hidden');
   }
 
   renderGallery() {
+    if (!this.list) return;
     this.list.innerHTML = '';
     this.snapshots.forEach(snap => {
       const card = document.createElement('div');

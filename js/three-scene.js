@@ -59,9 +59,17 @@ class SceneManager {
     this.controls.enableDamping = true;
     this.controls.dampingFactor = 0.05;
 
-    // Clipping plane
-    this.clippingPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+    // Clipping plane (inicia desactivado con constante lejana para ver el modelo 100% completo)
+    this.clippingPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 1000);
     this.scene.clippingPlanes = [this.clippingPlane];
+    this.modelRadius = 1.5;
+
+    // Helper visual sutil para el plano de corte
+    this.planeHelper = new THREE.PlaneHelper(this.clippingPlane, 3.2, 0x38bdf8);
+    this.planeHelper.material.transparent = true;
+    this.planeHelper.material.opacity = 0.45;
+    this.planeHelper.visible = false;
+    this.scene.add(this.planeHelper);
 
     // Resize
     window.addEventListener('resize', () => this.onResize());
@@ -175,6 +183,11 @@ class SceneManager {
       // Re-centrar teniendo en cuenta la nueva escala
       model.position.multiplyScalar(scale);
     }
+
+    // Calcular radio visual acotado
+    const updatedBox = new THREE.Box3().setFromObject(model);
+    const sphere = updatedBox.getBoundingSphere(new THREE.Sphere());
+    this.modelRadius = sphere.radius || 1.3;
   }
 
   createFallbackModel(type) {
@@ -250,6 +263,20 @@ class SceneManager {
     this.currentModel.rotation.x += dy * 0.005;
   }
 
+  // Acercar suavemente (límite mínimo seguro 2.2)
+  zoomInStep(speed = 0.05) {
+    if (!this.currentModel || !this.camera) return;
+    this.camera.position.z = Math.max(2.2, this.camera.position.z - speed);
+    this.camera.updateProjectionMatrix();
+  }
+
+  // Alejar suavemente (límite máximo 9.0)
+  zoomOutStep(speed = 0.05) {
+    if (!this.currentModel || !this.camera) return;
+    this.camera.position.z = Math.min(9.0, this.camera.position.z + speed);
+    this.camera.updateProjectionMatrix();
+  }
+
   zoomModel(factor) {
     if (!this.currentModel || !this.enabled) return;
     let targetZoom;
@@ -285,10 +312,16 @@ class SceneManager {
 
   setClippingPlane(enabled, normal, constant) {
     if (enabled) {
-      this.clippingPlane.normal.copy(normal);
-      this.clippingPlane.constant = constant;
+      if (normal) this.clippingPlane.normal.copy(normal);
+      // Rango acotado: nunca más allá de +/- 75% del radio para no rebanar el 100%
+      const maxLimit = this.modelRadius * 0.75;
+      const boundedConstant = THREE.MathUtils.clamp(constant, -maxLimit, maxLimit);
+      this.clippingPlane.constant = boundedConstant;
+      if (this.planeHelper) this.planeHelper.visible = true;
     } else {
-      this.clippingPlane.constant = -1000;
+      // Fuera del modelo: el objeto se ve 100% íntegro
+      this.clippingPlane.constant = 1000;
+      if (this.planeHelper) this.planeHelper.visible = false;
     }
   }
 }

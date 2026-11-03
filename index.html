@@ -24,8 +24,16 @@
   <!-- Escena 3D -->
   <div id="canvas-container"></div>
 
-  <!-- Cursor de mano 2D (DOM, no 3D) -->
-  <div id="hand-cursor"></div>
+  <!-- Cursor de mano 2D (DOM, no 3D) con anillo de dwell y badge de modo -->
+  <div id="hand-cursor">
+    <svg class="dwell-circle" viewBox="0 0 36 36">
+      <path class="dwell-path" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+    </svg>
+    <div id="cursor-badge">MODO: LIBRE</div>
+  </div>
+
+  <!-- Indicador flotante superior de modo -->
+  <div id="gesture-mode-banner">MODO: LIBRE</div>
 
   <!-- Indicador de estado -->
   <div id="status-indicator" style="
@@ -62,6 +70,35 @@
     <label>
       <input type="checkbox" id="toggle-annotations" checked /> Smart Annotations
     </label>
+
+    <!-- Guía de Gestos -->
+    <div class="gesture-guide">
+      <h3>Guía de Gestos</h3>
+      <div class="gesture-item">
+        <span class="gesture-dot dot-free"></span>
+        <span class="gesture-text">🖐️ <strong>Palma abierta</strong>: Mover cursor / Apuntar</span>
+      </div>
+      <div class="gesture-item">
+        <span class="gesture-dot dot-rotate"></span>
+        <span class="gesture-text">✊ <strong>Puño cerrado</strong>: Rotar modelo 3D</span>
+      </div>
+      <div class="gesture-item">
+        <span class="gesture-dot dot-zoom-in"></span>
+        <span class="gesture-text">🤏 <strong>Pinza</strong>: Acercar (Zoom)</span>
+      </div>
+      <div class="gesture-item">
+        <span class="gesture-dot dot-zoom-out"></span>
+        <span class="gesture-text">👆 <strong>Gesto "L"</strong>: Alejar</span>
+      </div>
+      <div class="gesture-item">
+        <span class="gesture-dot dot-rx"></span>
+        <span class="gesture-text">✌️ <strong>Dos dedos (Y)</strong>: Mover Corte RX</span>
+      </div>
+      <div class="gesture-item">
+        <span class="gesture-dot dot-capture"></span>
+        <span class="gesture-text">🔲 <strong>Gesto Foto</strong>: Captura de pantalla</span>
+      </div>
+    </div>
   </aside>
 
   <!-- Panel informativo (Smart Annotations) -->
