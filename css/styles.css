@@ -1,9 +1,9 @@
 /* SYNAPSE — Estilos base */
 
 :root {
-  --accent: #00f3ff;
-  --accent-hover: #4fd1c5;
-  --bg-dark: #0a0b0e;
+  --accent: #22d3ee;
+  --accent-hover: #67e8f9;
+  --bg-dark: #090d14;
   --panel-bg: rgba(15, 17, 22, 0.9);
   --text-main: #f1f5f9;
   --text-muted: #94a3b8;
@@ -17,7 +17,7 @@
 }
 
 body {
-  background: radial-gradient(circle at center, #1a1d23 0%, #0a0b0e 100%);
+  background: radial-gradient(circle at 55% 50%, #162232 0%, #090d14 100%);
   color: var(--text-main);
   font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
   overflow: hidden;
@@ -37,43 +37,23 @@ body {
   z-index: 0;
 }
 
-/* Puntero con estela de partículas */
-#pointer {
-  position: absolute;
-  width: 20px;
-  height: 20px;
-  background: #ffffff;
-  border: 3px solid #00f3ff;
-  border-radius: 50%;
+/* Cursor de mano 2D en el DOM */
+#hand-cursor {
+  position: fixed;
   pointer-events: none;
-  z-index: 99999;
-  transform: translate(-50%, -50%);
-  box-shadow: 0 0 20px rgba(0, 243, 255, 0.8), 0 0 40px rgba(255, 255, 255, 0.6);
-  opacity: 1;
-}
-
-#pointer.trail::after {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 100%;
-  height: 100%;
-  background: inherit;
+  z-index: 9999;
+  width: 22px;
+  height: 22px;
   border-radius: 50%;
-  opacity: 0.4;
-  transform: translate(-50%, -50%) scale(2.5);
-  animation: fadeTrail 0.6s forwards;
+  background: #ffffff;
+  border: 3px solid #38bdf8;
+  box-shadow: 0 0 14px rgba(56, 189, 248, 0.8);
+  transform: translate(-50%, -50%);
+  left: 50%;
+  top: 50%;
+  transition: transform 0.08s ease-out, border-color 0.2s, background-color 0.2s;
 }
 
-@keyframes fadeTrail {
-  to {
-    opacity: 0;
-    transform: translate(-50%, -50%) scale(3.5);
-  }
-}
-
-/* Video oculto */
 .video {
   display: none;
 }

@@ -16,9 +16,10 @@ class SnapshotManager {
   capture() {
     if (!this.sceneManager || !this.sceneManager.renderer) return;
 
-    // Renderizar frame actual a un canvas temporal
-    const width = this.sceneManager.renderer.domElement.width;
-    const height = this.sceneManager.renderer.domElement.height;
+    // Renderizar frame actual
+    const domElement = this.sceneManager.renderer.domElement;
+    const width = domElement.width;
+    const height = domElement.height;
 
     const tempCanvas = document.createElement('canvas');
     tempCanvas.width = width;
@@ -26,10 +27,30 @@ class SnapshotManager {
     const tempCtx = tempCanvas.getContext('2d');
 
     // Copiar el frame del WebGL renderer
-    tempCtx.drawImage(this.sceneManager.renderer.domElement, 0, 0);
+    tempCtx.drawImage(domElement, 0, 0);
 
     const dataUrl = tempCanvas.toDataURL('image/png');
     this.addSnapshot(dataUrl);
+
+    // Feedback visual en pantalla (flash)
+    this.triggerFlashFeedback();
+  }
+
+  triggerFlashFeedback() {
+    const flash = document.createElement('div');
+    flash.style.cssText = `
+      position: fixed;
+      inset: 0;
+      background: rgba(255, 255, 255, 0.4);
+      z-index: 999999;
+      pointer-events: none;
+      transition: opacity 0.4s ease-out;
+    `;
+    document.body.appendChild(flash);
+    requestAnimationFrame(() => {
+      flash.style.opacity = '0';
+      setTimeout(() => flash.remove(), 400);
+    });
   }
 
   startCaptureGesture() {

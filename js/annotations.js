@@ -1,6 +1,5 @@
 // SYNAPSE — Smart Annotations
-// Raycasting simple con el dedo índice para seleccionar partes del modelo 3D
-// y mostrar un panel informativo con datos técnicos.
+// Raycasting con el puntero de la mano para seleccionar partes del modelo 3D.
 
 class AnnotationManager {
   constructor() {
@@ -10,8 +9,34 @@ class AnnotationManager {
     this.panelDesc = document.getElementById('part-description');
     this.panelData = document.getElementById('part-tech-data');
 
-    // Diccionario de partes por entorno (ejemplo)
     this.partsDatabase = {
+      celula: {
+        'mitocondria': {
+          name: 'Mitocondria',
+          desc: 'Central energética de la célula. Produce ATP mediante respiración celular.',
+          data: ['Función: Energía (ATP)', 'Membrana: Doble', 'ADN propio: Sí']
+        },
+        'nucleo': {
+          name: 'Núcleo celular',
+          desc: 'Almacena el material genético y controla las actividades celulares.',
+          data: ['Contenido: ADN', 'Estructura: Envoltura nuclear', 'Tamaño: ~6 µm']
+        },
+        'reticulo': {
+          name: 'Retículo endoplasmático',
+          desc: 'Red de membranas implicada en la síntesis de proteínas y lípidos.',
+          data: ['Tipos: Rugoso y liso', 'Función: Síntesis y transporte']
+        },
+        'membrana': {
+          name: 'Membrana plasmática',
+          desc: 'Bicapa lipídica que rodea la célula y regula el paso de sustancias.',
+          data: ['Composición: Lípidos y proteínas', 'Función: Protección y transporte']
+        },
+        'citoplasma': {
+          name: 'Citoplasma',
+          desc: 'Medio acuoso que llena la célula y contiene los orgánulos.',
+          data: ['Composición: Agua, sales y proteínas', 'Función: Soporte interno']
+        }
+      },
       motor: {
         'piston': {
           name: 'Pistón de combustión',
@@ -29,37 +54,20 @@ class AnnotationManager {
           data: ['Tipo: De admisión', 'Ángulo: 45°', 'Diámetro: 35 mm']
         }
       },
-      celula: {
-        'mitocondria': {
-          name: 'Mitocondria',
-          desc: 'Central energética de la célula. Produce ATP mediante respiración celular.',
-          data: ['Función: Energía (ATP)', 'Membrana: Doble', 'ADN propio: Sí']
-        },
-        'nucleo': {
-          name: 'Núcleo celular',
-          desc: 'Almacena el material genético y controla las actividades celulares.',
-          data: ['Contenido: ADN', 'Estructura: Envoltura nuclear', 'Tamaño: ~6 µm']
-        },
-        'reticulo': {
-          name: 'Retículo endoplasmático',
-          desc: 'Red de membranas implicada en la síntesis de proteínas y lípidos.',
-          data: ['Tipos: Rugoso y liso', 'Función: Síntesis y transporte']
-        }
-      },
       planeta: {
         'atmosfera': {
           name: 'Capa atmosférica',
-          desc: 'Envolvente de gases que rodea al planeta y protege la superficie.',
+          desc: 'Envolvente de gases que rodea al planeta.',
           data: ['Composición: N₂ 78%, O₂ 21%', 'Capas: Troposfera, Estratosfera...']
         },
         'corteza': {
           name: 'Corteza geológica',
-          desc: 'Capa externa sólida del planeta, donde se forman los continentes.',
+          desc: 'Capa externa sólida del planeta.',
           data: ['Espesor: 5-70 km', 'Composición: Silicatos', 'Estado: Sólido']
         },
         'núcleo': {
           name: 'Núcleo planetario',
-          desc: 'Centro denso y caliente del planeta, generador del campo magnético.',
+          desc: 'Centro denso y caliente del planeta.',
           data: ['Temperatura: ~6000 °C', 'Composición: Hierro y níquel', 'Estado: Líquido/sólido']
         }
       }
@@ -67,8 +75,9 @@ class AnnotationManager {
 
     this.currentEnv = 'celula';
     this.hoverTimer = null;
-    this.hoverThreshold = 600; // ms manteniendo el dedo quieto para activar selección
+    this.hoverThreshold = 600;
     this.lastPartId = null;
+    this.modelMeshNames = [];
   }
 
   setEnabled(enabled) {
@@ -76,29 +85,40 @@ class AnnotationManager {
     if (!enabled) this.hidePanel();
   }
 
-  // Se llama desde el bucle principal con la posición del índice y el modelo actual
-  update(indexTip, sceneManager) {
-    if (!this.enabled || !indexTip || !sceneManager || !sceneManager.currentModel) return;
+  // Registra los nombres de las mallas del GLB al cargar
+  registerModelMeshNames(model) {
+    this.modelMeshNames = [];
+    model.traverse((child) => {
+      if (child.isMesh && child.name) {
+        this.modelMeshNames.push(child.name);
+      }
+    });
+    if (this.modelMeshNames.length > 0) {
+      console.log('Smart Annotations — Mallas del modelo:', this.modelMeshNames);
+    }
+  }
 
-    // Raycasting simple: proyectar el dedo índice desde la cámara hacia el modelo
-    // Como no tenemos coordenadas 3D exactas del dedo, usamos una aproximación:
-    // Disparamos un rayo desde la cámara hacia el centro del modelo (simplificación)
-    // En una implementación completa, se haría un raycast real desde la cámara
-    // a través de la posición normalizada del dedo en pantalla.
+  setEnvironment(env) {
+    this.currentEnv = env;
+    this.hidePanel();
+  }
+
+  update(point2D, sceneManager) {
+    if (!this.enabled || !point2D || !sceneManager || !sceneManager.currentModel || !sceneManager.camera) return;
 
     const raycaster = new THREE.Raycaster();
+    // Coordenadas normalizadas (-1 a +1)
     const mouse = new THREE.Vector2(
-      -((indexTip.x / window.innerWidth) * 2 - 1),
-      -(indexTip.y / window.innerHeight) * 2 + 1
+      (point2D.x / window.innerWidth) * 2 - 1,
+      -(point2D.y / window.innerHeight) * 2 + 1
     );
 
     raycaster.setFromCamera(mouse, sceneManager.camera);
-
     const intersects = raycaster.intersectObject(sceneManager.currentModel, true);
 
     if (intersects.length > 0) {
       const object = intersects[0].object;
-      const partId = object.userData.partId || this.detectPartByName(object.name);
+      const partId = object.userData.partId || this.detectPartByName(object.name) || this.detectPartByPosition(intersects[0].point);
 
       if (partId) {
         this.startHoverTimer(partId);
@@ -111,7 +131,8 @@ class AnnotationManager {
   }
 
   detectPartByName(name) {
-    const lower = (name || '').toLowerCase();
+    if (!name) return null;
+    const lower = name.toLowerCase();
     const parts = this.partsDatabase[this.currentEnv];
     for (const id in parts) {
       if (lower.includes(id)) return id;
@@ -119,8 +140,17 @@ class AnnotationManager {
     return null;
   }
 
+  detectPartByPosition(point) {
+    // Asignación por zona si no hay nombre coincidente
+    const parts = this.partsDatabase[this.currentEnv];
+    const ids = Object.keys(parts);
+    const zone = Math.floor(((point.y + 2) / 4) * ids.length);
+    const idx = Math.max(0, Math.min(ids.length - 1, zone));
+    return ids[idx];
+  }
+
   startHoverTimer(partId) {
-    if (this.lastPartId === partId) return; // ya está seleccionado
+    if (this.lastPartId === partId) return;
 
     if (!this.hoverTimer) {
       this.hoverTimer = setTimeout(() => {
@@ -160,10 +190,5 @@ class AnnotationManager {
     this.panel.classList.add('hidden');
     this.lastPartId = null;
     this.cancelHover();
-  }
-
-  setEnvironment(env) {
-    this.currentEnv = env;
-    this.hidePanel();
   }
 }

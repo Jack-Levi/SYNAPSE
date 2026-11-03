@@ -11,61 +11,62 @@ class SceneManager {
     this.clippingPlane = null;
     this.enabled = true;
 
-    // Entornos disponibles (solo celula por ahora)
+    // Entornos disponibles
     this.environments = {
-      celula: 'assets/models/sel.glb'
+      celula: 'assets/models/sel.glb',
+      motor: 'assets/models/motor.glb',
+      planeta: 'assets/models/planeta.glb'
     };
-
-    // Cargar modelos reales, no placeholders
-    this.useFallback = false;
   }
 
   async init() {
     const container = document.getElementById('canvas-container');
 
-    // Escena
+    // Escena — fondo nulo para que se vea el CSS
     this.scene = new THREE.Scene();
-    this.scene.background = new THREE.Color(0x0a0b0e);
-    this.scene.fog = new THREE.FogExp2(0x0a0b0e, 0.015);
+    this.scene.background = null;
+    this.scene.fog = new THREE.FogExp2(0x090d14, 0.012);
 
     // Cámara
     this.camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 100);
     this.camera.position.set(0, 0, 6);
 
-    // Renderer
+    // Renderer — alpha true para fondo CSS
     this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     this.renderer.setSize(window.innerWidth, window.innerHeight);
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     this.renderer.localClippingEnabled = true;
     container.appendChild(this.renderer.domElement);
 
-    // Luz ambiental
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
-    this.scene.add(ambientLight);
+    // Iluminación de estudio
+    const hemiLight = new THREE.HemisphereLight(0xdbeafe, 0x1e293b, 1.5);
+    this.scene.add(hemiLight);
 
-    // Luz puntual cian (estética futurista)
-    const pointLight = new THREE.PointLight(0x00f3ff, 1, 100);
-    pointLight.position.set(5, 5, 5);
-    this.scene.add(pointLight);
+    const mainLight = new THREE.DirectionalLight(0xffffff, 2.2);
+    mainLight.position.set(5, 8, 6);
+    this.scene.add(mainLight);
 
-    // Luz puntual magenta
-    const pointLight2 = new THREE.PointLight(0xff00ff, 0.7, 100);
-    pointLight2.position.set(-5, -5, 5);
-    this.scene.add(pointLight2);
+    const fillLight = new THREE.DirectionalLight(0x93c5fd, 1.0);
+    fillLight.position.set(-6, -2, 4);
+    this.scene.add(fillLight);
 
-    // OrbitControls (fallback si no hay gestos, solo para prueba en desktop)
+    const rimLight = new THREE.DirectionalLight(0x38bdf8, 1.2);
+    rimLight.position.set(0, 5, -8);
+    this.scene.add(rimLight);
+
+    // OrbitControls
     this.controls = new THREE.OrbitControls(this.camera, this.renderer.domElement);
     this.controls.enableDamping = true;
     this.controls.dampingFactor = 0.05;
 
-    // Clipping plane (corte transversal)
+    // Clipping plane
     this.clippingPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
     this.scene.clippingPlanes = [this.clippingPlane];
 
-    // Manejo de resize
+    // Resize
     window.addEventListener('resize', () => this.onResize());
 
-    // Cargar entorno por defecto (celula)
+    // Cargar modelo por defecto
     await this.loadEnvironment('celula');
   }
 
@@ -77,64 +78,165 @@ class SceneManager {
     }
 
     const url = this.environments[envKey];
-
-    if (this.useFallback || !url) {
-      this.createFallbackModel(envKey);
-      return;
-    }
+    const modelName = envKey.charAt(0).toUpperCase() + envKey.slice(1);
 
     const loader = new THREE.GLTFLoader();
     try {
       const gltf = await loader.loadAsync(url);
       this.currentModel = gltf.scene;
-      this.currentModel.scale.setScalar(2.0);
-      this.currentModel.position.set(0, 0, 0);
+
+      // Centrar y normalizar escala
+      this.centerAndNormalize(this.currentModel);
       this.scene.add(this.currentModel);
 
-      // Aplicar clipping plane a todos los materiales del modelo
+      // Imprimir nombres de mallas una sola vez al cargar
+      const meshNames = [];
+      this.currentModel.traverse((child) => {
+        if (child.isMesh && child.name) {
+          meshNames.push(child.name);
+        }
+      });
+      console.log(`[SYNAPSE] Mallas cargadas en el modelo ${modelName}:`, meshNames);
+
+      // Aplicar clipping plane y DoubleSide a todos los materiales
       this.currentModel.traverse((child) => {
         if (child.isMesh) {
           child.material.clippingPlanes = [this.clippingPlane];
+          child.material.side = THREE.DoubleSide;
           child.material.needsUpdate = true;
         }
       });
 
-      // Enfocar cámara al modelo
+      // Enfocar cámara
       const box = new THREE.Box3().setFromObject(this.currentModel);
       const center = box.getCenter(new THREE.Vector3());
       this.controls.target.copy(center);
       this.camera.position.copy(center).add(new THREE.Vector3(0, 0, 6));
       this.controls.update();
+
+      document.getElementById('status-modelo').textContent = `Modelo: ${modelName} OK`;
+      return;
     } catch (err) {
-      console.warn(`No se pudo cargar ${url}, usando modelo de respaldo.`, err);
-      this.createFallbackModel(envKey);
+      console.warn(`No se pudo cargar ${url}:`, err.message);
+      document.getElementById('status-modelo').textContent = `Modelo: ${modelName} fallback`;
     }
 
-    // Si no hay modelo después de intentar cargar, crear uno de respaldo
-    if (!this.currentModel) {
-      this.createFallbackModel(envKey || 'celula');
+    // Notificación visual en HUD si es fallback
+    const hudNotification = document.createElement('div');
+    hudNotification.style.cssText = `
+      position: fixed;
+      bottom: 1.5rem;
+      left: 1.5rem;
+      background: rgba(15, 23, 42, 0.85);
+      border: 1px solid rgba(56, 189, 248, 0.4);
+      color: #94a3b8;
+      font-size: 0.8rem;
+      padding: 8px 14px;
+      border-radius: 6px;
+      z-index: 999;
+      backdrop-filter: blur(8px);
+      pointer-events: none;
+      transition: opacity 0.5s ease;
+    `;
+    hudNotification.textContent = `Aviso: Archivo 3D no encontrado. Visualizando ${modelName} procedural.`;
+    document.body.appendChild(hudNotification);
+    setTimeout(() => {
+      hudNotification.style.opacity = '0';
+      setTimeout(() => hudNotification.remove(), 500);
+    }, 3500);
+
+    // Fallback procedural
+    this.createFallbackModel(envKey);
+    const statusElem = document.getElementById('status-modelo');
+    if (statusElem) statusElem.textContent = `Modelo: ${modelName} (procedural)`;
+  }
+
+  centerAndNormalize(model) {
+    // Resetear transformaciones previas
+    model.position.set(0, 0, 0);
+    model.rotation.set(0, 0, 0);
+    model.scale.set(1, 1, 1);
+    model.updateMatrixWorld(true);
+
+    const box = new THREE.Box3().setFromObject(model);
+    const center = box.getCenter(new THREE.Vector3());
+    const size = box.getSize(new THREE.Vector3());
+
+    // Desplazar pivote para centrar exactamente en (0,0,0)
+    model.position.x = -center.x;
+    model.position.y = -center.y;
+    model.position.z = -center.z;
+
+    // Normalizar a una dimensión visual estándar uniforme (aprox. diámetro visual de 2.5 unidades)
+    const maxDim = Math.max(size.x, size.y, size.z);
+    if (maxDim > 0) {
+      const scale = 2.5 / maxDim;
+      model.scale.setScalar(scale);
+      // Re-centrar teniendo en cuenta la nueva escala
+      model.position.multiplyScalar(scale);
     }
   }
 
   createFallbackModel(type) {
-    // Geometría simple para probar sin archivos .glb reales
     let geometry, material;
 
     if (type === 'motor') {
-      geometry = new THREE.CylinderGeometry(1, 1, 2, 32);
-      material = new THREE.MeshPhongMaterial({ color: 0x333333, emissive: 0x111111 });
+      // Motor procedural: bloque + cilindros
+      const group = new THREE.Group();
+      const blockMat = new THREE.MeshPhongMaterial({ color: 0x2a2a2a, emissive: 0x111111 });
+      const metalMat = new THREE.MeshPhongMaterial({ color: 0x555555, emissive: 0x111111 });
+
+      const block = new THREE.Mesh(new THREE.BoxGeometry(2, 1.5, 2), blockMat);
+      group.add(block);
+
+      for (let i = 0; i < 4; i++) {
+        const cyl = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.35, 1.2, 16), metalMat);
+        cyl.position.set(-0.7 + i * 0.5, 0, 0.4);
+        cyl.rotation.x = Math.PI / 2;
+        group.add(cyl);
+      }
+
+      this.currentModel = group;
     } else if (type === 'celula') {
-      geometry = new THREE.IcosahedronGeometry(1.2, 2);
-      material = new THREE.MeshPhongMaterial({ color: 0x00ff88, emissive: 0x003344 });
+      const group = new THREE.Group();
+      const membraneMat = new THREE.MeshPhongMaterial({ color: 0x4da6ff, emissive: 0x003344, transparent: true, opacity: 0.8 });
+      const nucleusMat = new THREE.MeshPhongMaterial({ color: 0x7b2cbf, emissive: 0x2d1b69 });
+
+      const membrane = new THREE.Mesh(new THREE.SphereGeometry(1.2, 32, 32), membraneMat);
+      group.add(membrane);
+
+      const nucleus = new THREE.Mesh(new THREE.SphereGeometry(0.45, 24, 24), nucleusMat);
+      nucleus.position.set(0, 0.1, 0);
+      group.add(nucleus);
+
+      this.currentModel = group;
     } else {
-      // planeta
-      geometry = new THREE.SphereGeometry(1.2, 32, 32);
-      material = new THREE.MeshPhongMaterial({ color: 0x2266aa, emissive: 0x001122 });
+      // Planeta procedural: esferas concéntricas
+      const group = new THREE.Group();
+      const crustMat = new THREE.MeshPhongMaterial({ color: 0x4a6fa5, emissive: 0x0d1b2a });
+      const mantleMat = new THREE.MeshPhongMaterial({ color: 0xd4822b, emissive: 0x3a200b });
+      const coreMat = new THREE.MeshPhongMaterial({ color: 0xffb700, emissive: 0x4a3200 });
+
+      const crust = new THREE.Mesh(new THREE.SphereGeometry(1.2, 32, 32), crustMat);
+      group.add(crust);
+
+      const mantle = new THREE.Mesh(new THREE.SphereGeometry(0.85, 32, 32), mantleMat);
+      group.add(mantle);
+
+      const core = new THREE.Mesh(new THREE.SphereGeometry(0.5, 24, 24), coreMat);
+      group.add(core);
+
+      this.currentModel = group;
     }
 
-    this.currentModel = new THREE.Mesh(geometry, material);
-    this.currentModel.material.clippingPlanes = [this.clippingPlane];
-    this.currentModel.material.needsUpdate = true;
+    this.currentModel.traverse((child) => {
+      if (child.isMesh) {
+        child.material.clippingPlanes = [this.clippingPlane];
+        child.material.side = THREE.DoubleSide;
+        child.material.needsUpdate = true;
+      }
+    });
+
     this.scene.add(this.currentModel);
 
     this.controls.target.set(0, 0, 0);
@@ -142,17 +244,14 @@ class SceneManager {
     this.controls.update();
   }
 
-  // Rotar modelo por gesto de pinza / pujo (arrastrar)
   rotateModel(dx, dy) {
     if (!this.currentModel || !this.enabled) return;
     this.currentModel.rotation.y += dx * 0.005;
     this.currentModel.rotation.x += dy * 0.005;
   }
 
-  // Zoom por factor (0.5 = cerca, 2.0 = lejos) o por distancia entre manos
   zoomModel(factor) {
     if (!this.currentModel || !this.enabled) return;
-    // Si factor está entre 0 y 1, es distancia entre manos; si es > 1, es factor directo
     let targetZoom;
     if (factor <= 1) {
       targetZoom = THREE.MathUtils.lerp(3, 10, factor);
@@ -164,7 +263,6 @@ class SceneManager {
     this.camera.updateProjectionMatrix();
   }
 
-  // Alejar la cámara (zoom out rápido)
   zoomOut() {
     if (!this.currentModel || !this.enabled) return;
     this.camera.position.z = THREE.MathUtils.lerp(this.camera.position.z, 12, 0.15);
@@ -190,7 +288,6 @@ class SceneManager {
       this.clippingPlane.normal.copy(normal);
       this.clippingPlane.constant = constant;
     } else {
-      // Desactivar corte: poner el plano lejos del modelo
       this.clippingPlane.constant = -1000;
     }
   }
