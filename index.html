@@ -27,14 +27,6 @@
   <!-- Puntero de partículas (estela del dedo índice) -->
   <div id="pointer"></div>
 
-  <!-- HUD superior -->
-  <div id="hud">
-    <div class="hud-item" id="status-camera">Cámara: Iniciando...</div>
-    <div class="hud-item active" id="status-gesture">
-      <span class="hud-dot"></span><span id="gesture-text">Gesto: Ninguno</span>
-    </div>
-  </div>
-
   <!-- Menú lateral -->
   <aside id="sidebar">
     <h2>SYNAPSE</h2>
@@ -50,6 +42,30 @@
     <label>
       <input type="checkbox" id="toggle-annotations" checked /> Smart Annotations
     </label>
+
+    <div class="gesture-guide">
+      <h3>Gestos</h3>
+      <div class="gesture-item">
+        <span class="gesture-icon">🤏</span>
+        <span><strong>Pinza / Puño:</strong> Rotar modelo</span>
+      </div>
+      <div class="gesture-item">
+        <span class="gesture-icon">👐</span>
+        <span><strong>Dos manos:</strong> Acercar / Alejar (zoom)</span>
+      </div>
+      <div class="gesture-item">
+        <span class="gesture-icon">✋</span>
+        <span><strong>Palma abierta:</strong> Pausar rotación</span>
+      </div>
+      <div class="gesture-item">
+        <span class="gesture-icon">☝️</span>
+        <span><strong>Apuntar + mantener:</strong> Ver detalles de la parte</span>
+      </div>
+      <div class="gesture-item">
+        <span class="gesture-icon">👌</span>
+        <span><strong>Pinza sostenida (1s):</strong> Tomar captura (Snapshot)</span>
+      </div>
+    </div>
   </aside>
 
   <!-- Panel informativo (Smart Annotations) -->

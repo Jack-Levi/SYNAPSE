@@ -72,10 +72,6 @@ function setupGestureBindings() {
   gestureTracker.onGesture = (gesture) => {
     if (!sceneManager) return;
 
-    // Actualizar texto de gesto en HUD
-    const gestureText = document.getElementById('gesture-text');
-    if (gestureText) gestureText.textContent = `Gesto: ${gesture.currentGesture}`;
-
     // Rotar con pinza o puño (arrastrar)
     if (gesture.isPinching || gesture.isFist) {
       // Usamos la punta del índice como referencia de movimiento
