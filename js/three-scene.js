@@ -25,8 +25,8 @@ class SceneManager {
 
     // Escena
     this.scene = new THREE.Scene();
-    this.scene.background = new THREE.Color(0x05070a);
-    this.scene.fog = new THREE.FogExp2(0x05070a, 0.02);
+    this.scene.background = new THREE.Color(0x0a0b0e);
+    this.scene.fog = new THREE.FogExp2(0x0a0b0e, 0.015);
 
     // Cámara
     this.camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 100);
@@ -108,6 +108,11 @@ class SceneManager {
     } catch (err) {
       console.warn(`No se pudo cargar ${url}, usando modelo de respaldo.`, err);
       this.createFallbackModel(envKey);
+    }
+
+    // Si no hay modelo después de intentar cargar, crear uno de respaldo
+    if (!this.currentModel) {
+      this.createFallbackModel(envKey || 'celula');
     }
   }
 

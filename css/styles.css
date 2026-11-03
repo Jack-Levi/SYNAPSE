@@ -1,10 +1,10 @@
 /* SYNAPSE — Estilos base */
 
 :root {
-  --accent: #64748b;
-  --accent-hover: #94a3b8;
-  --bg-dark: #08090a;
-  --panel-bg: rgba(20, 22, 26, 0.9);
+  --accent: #00f3ff;
+  --accent-hover: #4fd1c5;
+  --bg-dark: #0a0b0e;
+  --panel-bg: rgba(15, 17, 22, 0.9);
   --text-main: #f1f5f9;
   --text-muted: #94a3b8;
   --border: rgba(255, 255, 255, 0.08);
@@ -17,7 +17,7 @@
 }
 
 body {
-  background: radial-gradient(circle at center, #121418 0%, #08090a 100%);
+  background: radial-gradient(circle at center, #1a1d23 0%, #0a0b0e 100%);
   color: var(--text-main);
   font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
   overflow: hidden;
@@ -40,13 +40,15 @@ body {
 /* Puntero con estela de partículas */
 #pointer {
   position: absolute;
-  width: 8px;
-  height: 8px;
-  background: #94a3b8;
+  width: 16px;
+  height: 16px;
+  background: #ffffff;
+  border: 2px solid #00f3ff;
   border-radius: 50%;
   pointer-events: none;
-  z-index: 100;
+  z-index: 9999;
   transform: translate(-50%, -50%);
+  box-shadow: 0 0 15px rgba(0, 243, 255, 0.6), 0 0 30px rgba(255, 255, 255, 0.4);
 }
 
 #pointer.trail::after {
@@ -58,15 +60,15 @@ body {
   height: 100%;
   background: inherit;
   border-radius: 50%;
-  opacity: 0.2;
-  transform: translate(-50%, -50%) scale(1.8);
-  animation: fadeTrail 0.4s forwards;
+  opacity: 0.35;
+  transform: translate(-50%, -50%) scale(2.2);
+  animation: fadeTrail 0.5s forwards;
 }
 
 @keyframes fadeTrail {
   to {
     opacity: 0;
-    transform: translate(-50%, -50%) scale(2.5);
+    transform: translate(-50%, -50%) scale(3);
   }
 }
 
@@ -78,6 +80,6 @@ body {
 /* Utilidades */
 .divider {
   height: 1px;
-  background: linear-gradient(90deg, transparent, var(--cyber-cyan), transparent);
+  background: linear-gradient(90deg, transparent, var(--accent), transparent);
   margin: 1rem 0;
 }
