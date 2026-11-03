@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SYNAPSE — Laboratorio Científico Futurista</title>
+  <link rel="stylesheet" href="css/styles.css" />
+  <link rel="stylesheet" href="css/hud.css" />
+  <!-- Three.js -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+  <!-- MediaPipe Hands -->
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils"></script>
+</head>
+<body>
+
+  <!-- Video de la cámara (oculto, solo para tracking) -->
+  <video id="input_video" class="hidden" autoplay playsinline muted></video>
+  <canvas id="output_canvas" class="hidden"></canvas>
+
+  <!-- Escena 3D -->
+  <div id="canvas-container"></div>
+
+  <!-- Puntero de partículas (estela del dedo índice) -->
+  <div id="pointer"></div>
+
+  <!-- HUD superior -->
+  <div id="hud">
+    <div class="hud-item" id="status-camera">Cámara: Iniciando...</div>
+    <div class="hud-item" id="status-gesture">Gesto: Ninguno</div>
+    <div class="hud-item" id="status-fps">FPS: 60</div>
+  </div>
+
+  <!-- Menú lateral -->
+  <aside id="sidebar">
+    <h2>SYNAPSE</h2>
+    <nav>
+      <button data-env="motor" class="env-btn active">Motor Mecánico</button>
+      <button data-env="celula" class="env-btn">Célula Biológica</button>
+      <button data-env="planeta" class="env-btn">Planeta</button>
+    </nav>
+    <div class="divider"></div>
+    <label>
+      <input type="checkbox" id="toggle-crosssection" /> Corte Transversal (RX)
+    </label>
+    <label>
+      <input type="checkbox" id="toggle-annotations" checked /> Smart Annotations
+    </label>
+  </aside>
+
+  <!-- Panel informativo (Smart Annotations) -->
+  <div id="annotation-panel" class="hidden">
+    <div class="panel-header">
+      <h3 id="part-name">Parte seleccionada</h3>
+      <button id="close-annotation">✕</button>
+    </div>
+    <div class="panel-body">
+      <p id="part-description">Apunta con el índice a una parte del modelo y mantén la posición para ver los detalles técnicos.</p>
+      <ul id="part-tech-data" class="tech-data"></ul>
+    </div>
+  </div>
+
+  <!-- Galería flotante de snapshots -->
+  <div id="snapshot-gallery" class="hidden">
+    <h4>Capturas recientes</h4>
+    <div id="snapshot-list"></div>
+  </div>
+
+  <script src="js/gesture-tracking.js"></script>
+  <script src="js/three-scene.js"></script>
+  <script src="js/annotations.js"></script>
+  <script src="js/cross-section.js"></script>
+  <script src="js/snapshot.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>

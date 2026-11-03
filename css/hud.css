@@ -1,0 +1,196 @@
+/* SYNAPSE — HUD Ciberespacial */
+
+#hud {
+  position: absolute;
+  top: 1rem;
+  left: 1rem;
+  display: flex;
+  gap: 1rem;
+  z-index: 100;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 0.85rem;
+  color: var(--cyber-cyan);
+  text-shadow: 0 0 6px var(--cyber-cyan);
+}
+
+.hud-item {
+  padding: 4px 8px;
+  border: 1px solid rgba(0, 243, 255, 0.3);
+  border-radius: 4px;
+  background: rgba(0, 243, 255, 0.05);
+}
+
+/* Menú lateral */
+#sidebar {
+  position: absolute;
+  top: 50%;
+  left: 1rem;
+  transform: translateY(-50%);
+  width: 220px;
+  background: var(--panel-bg);
+  border: 1px solid rgba(0, 243, 255, 0.25);
+  border-radius: 8px;
+  padding: 1.2rem;
+  z-index: 100;
+  backdrop-filter: blur(8px);
+  box-shadow: 0 0 20px rgba(0, 243, 255, 0.15);
+}
+
+#sidebar h2 {
+  font-size: 1.1rem;
+  color: var(--cyber-cyan);
+  margin-bottom: 1rem;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
+#sidebar nav {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.env-btn {
+  background: rgba(0, 243, 255, 0.1);
+  border: 1px solid rgba(0, 243, 255, 0.4);
+  color: var(--text-main);
+  padding: 0.6rem 0.8rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  text-align: left;
+  transition: all 0.2s;
+}
+
+.env-btn:hover {
+  background: rgba(0, 243, 255, 0.2);
+  border-color: var(--cyber-cyan);
+}
+
+.env-btn.active {
+  background: var(--cyber-cyan);
+  color: #000;
+  border-color: var(--cyber-cyan);
+  font-weight: bold;
+}
+
+#sidebar label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.8rem;
+  cursor: pointer;
+  margin-bottom: 0.5rem;
+}
+
+/* Panel de anotaciones */
+#annotation-panel {
+  position: absolute;
+  top: 2rem;
+  right: 2rem;
+  width: 320px;
+  background: var(--panel-bg);
+  border: 1px solid rgba(0, 243, 255, 0.3);
+  border-radius: 8px;
+  padding: 1rem;
+  z-index: 100;
+  backdrop-filter: blur(8px);
+  box-shadow: 0 0 30px rgba(0, 243, 255, 0.2);
+  animation: slideIn 0.3s ease;
+}
+
+@keyframes slideIn {
+  from { opacity: 0; transform: translateX(40px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+.panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.8rem;
+  border-bottom: 1px solid rgba(0, 243, 255, 0.2);
+  padding-bottom: 0.5rem;
+}
+
+.panel-header h3 {
+  color: var(--cyber-cyan);
+  font-size: 1rem;
+}
+
+#close-annotation {
+  background: transparent;
+  border: 1px solid rgba(255, 0, 255, 0.4);
+  color: var(--cyber-pink);
+  padding: 2px 8px;
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 0.8rem;
+}
+
+.panel-body p {
+  font-size: 0.85rem;
+  margin-bottom: 0.6rem;
+  line-height: 1.4;
+}
+
+.tech-data {
+  list-style: none;
+  font-size: 0.8rem;
+  color: #aab2bd;
+}
+
+.tech-data li {
+  margin-bottom: 0.3rem;
+  border-left: 2px solid var(--cyber-cyan);
+  padding-left: 0.6rem;
+}
+
+/* Galería de snapshots */
+#snapshot-gallery {
+  position: absolute;
+  bottom: 1.5rem;
+  right: 1.5rem;
+  width: 260px;
+  background: var(--panel-bg);
+  border: 1px solid rgba(0, 243, 255, 0.3);
+  border-radius: 8px;
+  padding: 1rem;
+  z-index: 100;
+  backdrop-filter: blur(8px);
+}
+
+#snapshot-gallery h4 {
+  color: var(--cyber-cyan);
+  font-size: 0.9rem;
+  margin-bottom: 0.7rem;
+}
+
+.snapshot-card {
+  width: 100%;
+  height: 90px;
+  background: #0a0f1a;
+  border: 1px solid rgba(0, 243, 255, 0.2);
+  border-radius: 6px;
+  margin-bottom: 0.6rem;
+  position: relative;
+  overflow: hidden;
+}
+
+.snapshot-card img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0.85;
+}
+
+.snapshot-card::after {
+  content: 'Snapshot';
+  position: absolute;
+  bottom: 4px;
+  left: 6px;
+  font-size: 0.7rem;
+  color: var(--cyber-cyan);
+  text-shadow: 0 0 4px #000;
+}

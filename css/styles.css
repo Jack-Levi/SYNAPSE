@@ -1,0 +1,83 @@
+/* SYNAPSE — Estilos base */
+
+:root {
+  --cyber-cyan: #00f3ff;
+  --cyber-pink: #ff00ff;
+  --bg-dark: #05070a;
+  --panel-bg: rgba(10, 15, 25, 0.85);
+  --text-main: #e2e8f0;
+  --accent: var(--cyber-cyan);
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background: var(--bg-dark);
+  color: var(--text-main);
+  font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  overflow: hidden;
+  height: 100vh;
+}
+
+.hidden {
+  display: none !important;
+}
+
+#canvas-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+}
+
+/* Puntero con estela de partículas */
+#pointer {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  background: var(--cyber-cyan);
+  border-radius: 50%;
+  box-shadow: 0 0 12px var(--cyber-cyan), 0 0 24px var(--cyber-pink);
+  pointer-events: none;
+  z-index: 50;
+  transform: translate(-50%, -50%);
+}
+
+#pointer.trail::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 100%;
+  height: 100%;
+  background: inherit;
+  border-radius: 50%;
+  opacity: 0.4;
+  transform: translate(-50%, -50%) scale(1.6);
+  animation: fadeTrail 0.6s forwards;
+}
+
+@keyframes fadeTrail {
+  to {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(3);
+  }
+}
+
+/* Video oculto */
+.video {
+  display: none;
+}
+
+/* Utilidades */
+.divider {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--cyber-cyan), transparent);
+  margin: 1rem 0;
+}
