@@ -9,7 +9,15 @@ class SceneManager {
     this.controls = null;
     this.currentModel = null;
     this.clippingPlane = null;
+    this.planeHelper = null;
     this.enabled = true;
+    this.modelRadius = 1.5;
+    this.currentEnv = 'celula';
+
+    // Vista explotada
+    this.explosionFactor = 0; // 0.0 a 1.0
+    this.explodedMeshes = [];
+    this.originalPositions = new Map();
 
     // Entornos disponibles
     this.environments = {
@@ -96,6 +104,7 @@ class SceneManager {
       // Centrar y normalizar escala
       this.centerAndNormalize(this.currentModel);
       this.scene.add(this.currentModel);
+      this.currentEnv = envKey;
 
       // Imprimir nombres de mallas una sola vez al cargar
       const meshNames = [];
@@ -105,6 +114,9 @@ class SceneManager {
         }
       });
       console.log(`[SYNAPSE] Mallas cargadas en el modelo ${modelName}:`, meshNames);
+
+      // Preparar mallas para la Vista Explotada
+      this.setupExplodedView(this.currentModel);
 
       // Aplicar clipping plane y DoubleSide a todos los materiales
       this.currentModel.traverse((child) => {
@@ -190,6 +202,103 @@ class SceneManager {
     this.modelRadius = sphere.radius || 1.3;
   }
 
+  // Prepara los vectores de explosión y almacena posiciones originales
+  setupExplodedView(model) {
+    this.explodedMeshes = [];
+    this.originalPositions.clear();
+    let meshIndex = 0;
+
+    model.traverse((child) => {
+      if (child.isMesh) {
+        // Almacenar posición y escala originales
+        child.userData.originalPosition = child.position.clone();
+        child.userData.originalScale = child.scale.clone();
+        
+        // Guardar color emisivo original para el efecto de resaltado de pines
+        if (child.material) {
+          if (Array.isArray(child.material)) {
+            child.userData.originalMaterials = child.material.map(m => m.clone());
+          } else {
+            child.userData.originalEmissive = child.material.emissive ? child.material.emissive.clone() : new THREE.Color(0,0,0);
+            child.userData.originalEmissiveIntensity = child.material.emissiveIntensity || 0;
+          }
+        }
+
+        // Calcular dirección de explosión
+        const box = new THREE.Box3().setFromObject(child);
+        const center = box.getCenter(new THREE.Vector3());
+        
+        let dir = center.clone();
+        if (dir.lengthSq() < 0.001) {
+          // Si está en el centro, asignar dirección radial dispersa
+          const theta = (meshIndex * 2.3999632); // ángulo áureo
+          const phi = Math.acos(1 - 2 * ((meshIndex + 0.5) / 6));
+          dir = new THREE.Vector3(
+            Math.sin(phi) * Math.cos(theta),
+            Math.cos(phi),
+            Math.sin(phi) * Math.sin(theta)
+          );
+        } else {
+          dir.normalize();
+        }
+
+        child.userData.explodeDir = dir;
+        this.explodedMeshes.push(child);
+        meshIndex++;
+      }
+    });
+
+    this.setExplosionFactor(this.explosionFactor);
+  }
+
+  // Ajusta el nivel de desensamblaje holográfico (0.0 = unido, 1.0 = desensamblado)
+  setExplosionFactor(factor) {
+    this.explosionFactor = THREE.MathUtils.clamp(factor, 0, 1);
+    const maxDisplacement = this.modelRadius * 1.3;
+
+    this.explodedMeshes.forEach((mesh) => {
+      if (!mesh.userData.originalPosition || !mesh.userData.explodeDir) return;
+
+      const offset = mesh.userData.explodeDir.clone().multiplyScalar(this.explosionFactor * maxDisplacement);
+      mesh.position.copy(mesh.userData.originalPosition).add(offset);
+
+      // Si el modelo tiene muy pocas mallas (como sel.glb que tiene 2 partes),
+      // escalamos suavemente para hacer la explosión de orgánulos interna más dramática
+      if (this.explodedMeshes.length <= 3 && mesh.userData.originalScale) {
+        const scaleMul = 1.0 + (this.explosionFactor * 0.22);
+        mesh.scale.copy(mesh.userData.originalScale).multiplyScalar(scaleMul);
+      }
+    });
+  }
+
+  // Resalta una parte del modelo con emisión cian holográfica
+  highlightPart(partId) {
+    if (!this.currentModel) return;
+
+    this.currentModel.traverse((child) => {
+      if (child.isMesh && child.material && child.material.emissive) {
+        child.material.emissive = new THREE.Color(0x0ea5e9);
+        child.material.emissiveIntensity = 0.45;
+      }
+    });
+  }
+
+  clearHighlight() {
+    if (!this.currentModel) return;
+
+    this.currentModel.traverse((child) => {
+      if (child.isMesh && child.material && child.material.emissive) {
+        if (child.userData.originalEmissive) {
+          child.material.emissive.copy(child.userData.originalEmissive);
+          child.material.emissiveIntensity = child.userData.originalEmissiveIntensity || 0;
+        } else {
+          child.material.emissive.setHex(0x000000);
+          child.material.emissiveIntensity = 0;
+        }
+      }
+    });
+  }
+
   createFallbackModel(type) {
     let geometry, material;
 
@@ -251,6 +360,8 @@ class SceneManager {
     });
 
     this.scene.add(this.currentModel);
+    this.currentEnv = envKey;
+    this.setupExplodedView(this.currentModel);
 
     this.controls.target.set(0, 0, 0);
     this.camera.position.set(0, 0, 5);

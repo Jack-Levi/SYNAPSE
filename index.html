@@ -70,6 +70,9 @@
     <label>
       <input type="checkbox" id="toggle-annotations" checked /> Smart Annotations
     </label>
+    <label>
+      <input type="checkbox" id="toggle-exploded" /> Vista Explotada
+    </label>
 
     <!-- Guía de Gestos -->
     <div class="gesture-guide">
@@ -95,8 +98,12 @@
         <span class="gesture-text">✌️ <strong>Dos dedos (Y)</strong>: Mover Corte RX</span>
       </div>
       <div class="gesture-item">
+        <span class="gesture-dot dot-explode"></span>
+        <span class="gesture-text">👐 <strong>Dos manos</strong>: Vista Explotada</span>
+      </div>
+      <div class="gesture-item">
         <span class="gesture-dot dot-capture"></span>
-        <span class="gesture-text">🔲 <strong>Gesto Foto</strong>: Captura de pantalla</span>
+        <span class="gesture-text">🤙 <strong>Gesto Llamada (1s)</strong>: Captura de pantalla</span>
       </div>
     </div>
   </aside>
@@ -118,6 +125,58 @@
     <h4>Capturas recientes</h4>
     <div id="snapshot-list"></div>
   </div>
+
+  <!-- Mini-Radar de Esqueleto de Mano en Tiempo Real (Esquina inferior izquierda) -->
+  <div id="hand-radar-panel">
+    <div class="radar-header">
+      <span class="radar-indicator"></span>
+      <span id="radar-status-text">TRACKING: EN ESPERA...</span>
+    </div>
+    <canvas id="hand-radar-canvas" width="220" height="125"></canvas>
+  </div>
+
+  <!-- Barra Inferior de Telemetría Científica Dinámica -->
+  <footer id="telemetry-bar">
+    <div class="telemetry-item">
+      <span class="telemetry-label">ZOOM:</span>
+      <span id="tel-zoom" class="telemetry-value">1.00x</span>
+    </div>
+    <div class="telemetry-divider"></div>
+    <div class="telemetry-item">
+      <span class="telemetry-label">ROTACIÓN:</span>
+      <span id="tel-rot" class="telemetry-value">X 0° | Y 0°</span>
+    </div>
+    <div class="telemetry-divider"></div>
+    <div class="telemetry-item">
+      <span class="telemetry-label">EXPLOSIÓN:</span>
+      <span id="tel-exp" class="telemetry-value">0%</span>
+    </div>
+    <div class="telemetry-divider"></div>
+    <div class="telemetry-item">
+      <span class="telemetry-label">CORTE RX:</span>
+      <span id="tel-rx" class="telemetry-value">OFF</span>
+    </div>
+    <div class="telemetry-divider"></div>
+    <div class="telemetry-item telemetry-scale-box">
+      <span class="telemetry-label">ESCALA:</span>
+      <span class="scale-bracket">[</span>
+      <span class="scale-bar"></span>
+      <span id="tel-scale-text" class="scale-value">10 μm</span>
+      <span class="scale-bar"></span>
+      <span class="scale-bracket">]</span>
+    </div>
+    <div class="telemetry-divider"></div>
+    <div class="telemetry-item">
+      <span id="tel-fps" class="telemetry-value fps-tag">60 FPS</span>
+    </div>
+  </footer>
+
+  <!-- Canvas SVG de línea punteada de 2 manos para vista explotada -->
+  <svg id="two-hands-line-svg" style="position:fixed;inset:0;pointer-events:none;z-index:9990;display:none;">
+    <line id="two-hands-line" x1="0" y1="0" x2="0" y2="0" stroke="#38bdf8" stroke-width="2.5" stroke-dasharray="6,6" opacity="0.85" />
+    <circle id="two-hands-c1" cx="0" cy="0" r="7" fill="none" stroke="#38bdf8" stroke-width="2" />
+    <circle id="two-hands-c2" cx="0" cy="0" r="7" fill="none" stroke="#38bdf8" stroke-width="2" />
+  </svg>
 
   <script src="js/gesture-tracking.js"></script>
   <script src="js/three-scene.js"></script>

@@ -73,7 +73,7 @@ class SnapshotManager {
     const dataUrl = tempCanvas.toDataURL('image/png');
     this.addSnapshot(dataUrl);
 
-    // Feedback visual sutil (flash)
+    // Feedback visual en pantalla (flash suave 250 ms)
     this.triggerFlashFeedback();
     return true;
   }
@@ -83,15 +83,16 @@ class SnapshotManager {
     flash.style.cssText = `
       position: fixed;
       inset: 0;
-      background: rgba(255, 255, 255, 0.45);
+      background: rgba(255, 255, 255, 0.6);
       z-index: 999999;
       pointer-events: none;
-      transition: opacity 0.35s ease-out;
+      transition: opacity 0.25s ease-out;
+      opacity: 1;
     `;
     document.body.appendChild(flash);
     requestAnimationFrame(() => {
       flash.style.opacity = '0';
-      setTimeout(() => flash.remove(), 350);
+      setTimeout(() => flash.remove(), 250);
     });
   }
 
