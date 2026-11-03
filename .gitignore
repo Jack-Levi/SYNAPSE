@@ -1,0 +1,24 @@
+# Obsidian
+.obsidian/workspace.json
+.obsidian/workspace*
+*.log
+
+# OS
+Thumbs.db
+.DS_Store
+desktop.ini
+
+# Editor / IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Dependencias / build
+node_modules/
+dist/
+build/
+
+# Temp
+*.tmp
+*.temp
