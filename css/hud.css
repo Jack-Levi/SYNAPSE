@@ -6,19 +6,19 @@
   transform: translateY(-50%);
   width: 220px;
   background: var(--panel-bg);
-  border: 1px solid rgba(0, 243, 255, 0.25);
+  border: 1px solid var(--border);
   border-radius: 8px;
   padding: 1.2rem;
   z-index: 100;
   backdrop-filter: blur(8px);
-  box-shadow: 0 0 20px rgba(0, 243, 255, 0.15);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
 }
 
 #sidebar h2 {
   font-size: 1.1rem;
-  color: var(--cyber-cyan);
+  color: var(--text-main);
   margin-bottom: 1rem;
-  letter-spacing: 2px;
+  letter-spacing: 1px;
   text-transform: uppercase;
 }
 
@@ -30,8 +30,8 @@
 }
 
 .env-btn {
-  background: rgba(0, 243, 255, 0.1);
-  border: 1px solid rgba(0, 243, 255, 0.4);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border);
   color: var(--text-main);
   padding: 0.6rem 0.8rem;
   border-radius: 4px;
@@ -42,14 +42,14 @@
 }
 
 .env-btn:hover {
-  background: rgba(0, 243, 255, 0.2);
-  border-color: var(--cyber-cyan);
+  background: rgba(255, 255, 255, 0.1);
+  border-color: var(--accent-hover);
 }
 
 .env-btn.active {
-  background: var(--cyber-cyan);
-  color: #000;
-  border-color: var(--cyber-cyan);
+  background: var(--accent);
+  color: #ffffff;
+  border-color: var(--accent-hover);
   font-weight: bold;
 }
 
@@ -60,6 +60,7 @@
   font-size: 0.8rem;
   cursor: pointer;
   margin-bottom: 0.5rem;
+  color: var(--text-muted);
 }
 
 /* Panel de anotaciones */
@@ -69,12 +70,12 @@
   right: 2rem;
   width: 320px;
   background: var(--panel-bg);
-  border: 1px solid rgba(0, 243, 255, 0.3);
+  border: 1px solid var(--border);
   border-radius: 8px;
   padding: 1rem;
   z-index: 100;
   backdrop-filter: blur(8px);
-  box-shadow: 0 0 30px rgba(0, 243, 255, 0.2);
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.4);
   animation: slideIn 0.3s ease;
 }
 
@@ -88,40 +89,46 @@
   justify-content: space-between;
   align-items: center;
   margin-bottom: 0.8rem;
-  border-bottom: 1px solid rgba(0, 243, 255, 0.2);
+  border-bottom: 1px solid var(--border);
   padding-bottom: 0.5rem;
 }
 
 .panel-header h3 {
-  color: var(--cyber-cyan);
+  color: var(--text-main);
   font-size: 1rem;
 }
 
 #close-annotation {
   background: transparent;
-  border: 1px solid rgba(255, 0, 255, 0.4);
-  color: var(--cyber-pink);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
   padding: 2px 8px;
   border-radius: 3px;
   cursor: pointer;
   font-size: 0.8rem;
 }
 
+#close-annotation:hover {
+  border-color: var(--accent-hover);
+  color: var(--text-main);
+}
+
 .panel-body p {
   font-size: 0.85rem;
   margin-bottom: 0.6rem;
   line-height: 1.4;
+  color: var(--text-muted);
 }
 
 .tech-data {
   list-style: none;
   font-size: 0.8rem;
-  color: #aab2bd;
+  color: var(--text-muted);
 }
 
 .tech-data li {
   margin-bottom: 0.3rem;
-  border-left: 2px solid var(--cyber-cyan);
+  border-left: 2px solid var(--accent);
   padding-left: 0.6rem;
 }
 
@@ -132,15 +139,16 @@
   right: 1.5rem;
   width: 260px;
   background: var(--panel-bg);
-  border: 1px solid rgba(0, 243, 255, 0.3);
+  border: 1px solid var(--border);
   border-radius: 8px;
   padding: 1rem;
   z-index: 100;
   backdrop-filter: blur(8px);
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.4);
 }
 
 #snapshot-gallery h4 {
-  color: var(--cyber-cyan);
+  color: var(--text-main);
   font-size: 0.9rem;
   margin-bottom: 0.7rem;
 }
@@ -148,8 +156,8 @@
 .snapshot-card {
   width: 100%;
   height: 90px;
-  background: #0a0f1a;
-  border: 1px solid rgba(0, 243, 255, 0.2);
+  background: #121418;
+  border: 1px solid var(--border);
   border-radius: 6px;
   margin-bottom: 0.6rem;
   position: relative;
@@ -169,20 +177,19 @@
   bottom: 4px;
   left: 6px;
   font-size: 0.7rem;
-  color: var(--cyber-cyan);
-  text-shadow: 0 0 4px #000;
+  color: var(--text-muted);
 }
 
 /* Guía de gestos en el menú lateral */
 .gesture-guide {
   margin-top: 1.5rem;
   padding-top: 1rem;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  border-top: 1px solid var(--border);
 }
 
 .gesture-guide h3 {
   font-size: 0.9rem;
-  color: #aab2bd;
+  color: var(--text-muted);
   margin-bottom: 0.8rem;
   text-transform: uppercase;
   letter-spacing: 1px;
@@ -194,7 +201,7 @@
   gap: 0.6rem;
   margin-bottom: 0.6rem;
   font-size: 0.82rem;
-  color: #e2e8f0;
+  color: var(--text-main);
 }
 
 .gesture-icon {
@@ -204,5 +211,5 @@
 }
 
 .gesture-item strong {
-  color: #cbd5e1;
+  color: var(--text-main);
 }
