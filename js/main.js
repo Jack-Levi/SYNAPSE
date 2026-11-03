@@ -154,13 +154,18 @@ function animate(now) {
 
   // Actualizar posición del puntero visual (estela de partículas)
   // Invertir X para corregir modo espejo de la cámara frontal
+  const pointer = document.getElementById('pointer');
   if (gestureTracker && gestureTracker.indexTip) {
     const { x, y } = gestureTracker.indexTip;
-    const pointer = document.getElementById('pointer');
     pointer.style.left = `${window.innerWidth - x}px`;
     pointer.style.top = `${y}px`;
     pointer.classList.add('trail');
     setTimeout(() => pointer.classList.remove('trail'), 100);
+  } else {
+    // Posición por defecto en el centro cuando no hay mano detectada
+    pointer.style.left = `50%`;
+    pointer.style.top = `50%`;
+    pointer.classList.remove('trail');
   }
 }
 
