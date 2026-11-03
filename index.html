@@ -27,6 +27,26 @@
   <!-- Puntero de partículas (estela del dedo índice) -->
   <div id="pointer"></div>
 
+  <!-- Indicador de estado -->
+  <div id="status-indicator" style="
+    position: absolute;
+    top: 1rem;
+    left: 1rem;
+    z-index: 100000;
+    padding: 8px 12px;
+    background: rgba(0, 0, 0, 0.8);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 6px;
+    color: #e2e8f0;
+    font-family: monospace;
+    font-size: 0.85rem;
+    display: none;
+  ">
+    <div id="status-cam">Cámara: ⏳</div>
+    <div id="status-mediapipe">MediaPipe: ⏳</div>
+    <div id="status-modelo">Modelo: ⏳</div>
+  </div>
+
   <!-- Menú lateral -->
   <aside id="sidebar">
     <h2>SYNAPSE</h2>
