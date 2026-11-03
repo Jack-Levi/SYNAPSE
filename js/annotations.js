@@ -88,7 +88,7 @@ class AnnotationManager {
 
     const raycaster = new THREE.Raycaster();
     const mouse = new THREE.Vector2(
-      (indexTip.x / window.innerWidth) * 2 - 1,
+      -((indexTip.x / window.innerWidth) * 2 - 1),
       -(indexTip.y / window.innerHeight) * 2 + 1
     );
 

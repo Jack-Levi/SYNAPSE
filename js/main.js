@@ -72,6 +72,10 @@ function setupGestureBindings() {
   gestureTracker.onGesture = (gesture) => {
     if (!sceneManager) return;
 
+    // Actualizar texto de gesto en HUD
+    const gestureText = document.getElementById('gesture-text');
+    if (gestureText) gestureText.textContent = `Gesto: ${gesture.currentGesture}`;
+
     // Rotar con pinza o puño (arrastrar)
     if (gesture.isPinching || gesture.isFist) {
       // Usamos la punta del índice como referencia de movimiento
@@ -143,10 +147,11 @@ function animate(now) {
   }
 
   // Actualizar posición del puntero visual (estela de partículas)
+  // Invertir X para corregir modo espejo de la cámara frontal
   if (gestureTracker && gestureTracker.indexTip) {
     const { x, y } = gestureTracker.indexTip;
     const pointer = document.getElementById('pointer');
-    pointer.style.left = `${x}px`;
+    pointer.style.left = `${window.innerWidth - x}px`;
     pointer.style.top = `${y}px`;
     pointer.classList.add('trail');
     setTimeout(() => pointer.classList.remove('trail'), 100);

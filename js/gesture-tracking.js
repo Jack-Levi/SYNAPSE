@@ -16,6 +16,7 @@ class GestureTracker {
     this.isFist = false;         // puño cerrado
     this.isOpenPalm = false;     // palma abierta
     this.twoHandsDistance = null;// distancia entre manos (para zoom)
+    this.currentGesture = 'Ninguno'; // string descriptivo del gesto activo
 
     // Suavizado (Exponential Smoothing)
     this.smoothFactor = 0.2;
@@ -146,6 +147,19 @@ class GestureTracker {
       ringTip.y < hand[9].y &&
       pinkyTip.y < hand[9].y;
 
+    // Determinar gesto activo como string
+    if (handsLandmarks.length === 2) {
+      this.currentGesture = 'Dos manos (zoom)';
+    } else if (this.isPinching) {
+      this.currentGesture = 'Pinza (agarrar/rotar)';
+    } else if (this.isFist) {
+      this.currentGesture = 'Puño (rotar)';
+    } else if (this.isOpenPalm) {
+      this.currentGesture = 'Palma abierta (pausar)';
+    } else {
+      this.currentGesture = 'Ninguno';
+    }
+
     // Notificar callback si existe
     if (this.onGesture) {
       this.onGesture({
@@ -153,7 +167,8 @@ class GestureTracker {
         isPinching: this.isPinching,
         isFist: this.isFist,
         isOpenPalm: this.isOpenPalm,
-        twoHandsDistance: this.twoHandsDistance
+        twoHandsDistance: this.twoHandsDistance,
+        currentGesture: this.currentGesture
       });
     }
   }
